@@ -39,9 +39,10 @@ public:
     State(
       Eigen::Vector3d position,
       Eigen::Vector3d velocity,
-      double distance_x);
+      Eigen::Vector2d distance);
 
-    State(const rmf_traffic::Trajectory::Waypoint& waypoint, double distance_x);
+    State(const rmf_traffic::Trajectory::Waypoint& waypoint,
+      Eigen::Vector2d distance);
 
     double x() const
     {
@@ -75,7 +76,7 @@ public:
 
     Eigen::Vector3d position;
     Eigen::Vector3d velocity;
-    double distance_x;
+    Eigen::Vector2d distance;
   };
 
   struct Vertex
@@ -97,6 +98,11 @@ public:
   std::vector<std::shared_ptr<Vertex>> get_vertices()
   {
     return vertex_list;
+  }
+
+  double get_estimated_total_cost() const
+  {
+    return estimated_total_cost;
   }
 
 protected:
@@ -142,6 +148,8 @@ private:
     const std::shared_ptr<Vertex>& start_vertex,
     const std::shared_ptr<rmf_traffic::Trajectory>& trajectory);
 
+  void update_estimated_total_cost(const std::shared_ptr<Vertex>& vertex);
+
   std::shared_ptr<Vertex> goal_vertex;
 
   std::vector<std::shared_ptr<Vertex>> vertex_list;
@@ -149,6 +157,12 @@ private:
   std::random_device rd;
 
   std::mt19937 gen;
+
+  double estimated_total_cost;
+
+  double velocity;
+
+  double min_goal_distance;
 };
 }
 }

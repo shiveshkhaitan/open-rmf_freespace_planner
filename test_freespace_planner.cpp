@@ -29,6 +29,18 @@
 
 #include <unistd.h>
 
+bool done = false;
+
+void get_estimated_cost(
+  const std::shared_ptr<rmf_freespace_planner::kinodynamic_rrt_star::Posq>& posq)
+{
+  while (!done)
+  {
+    std::cout << "Estimated cost " << posq->get_estimated_total_cost() <<
+      std::endl;
+  }
+}
+
 int main(int argc, char* argv[])
 {
   rclcpp::init(argc, argv);
@@ -73,12 +85,12 @@ int main(int argc, char* argv[])
   new_obstacle.set(obstacle_routes);
 
   auto new_obstacle2 = rmf_traffic::schedule::make_participant(
-      rmf_traffic::schedule::ParticipantDescription{
-          "obstacle_" + std::to_string(1),
-          "obstacles",
-          rmf_traffic::schedule::ParticipantDescription::Rx::Unresponsive,
-          traits.profile()
-      }, database);
+    rmf_traffic::schedule::ParticipantDescription{
+      "obstacle_" + std::to_string(1),
+      "obstacles",
+      rmf_traffic::schedule::ParticipantDescription::Rx::Unresponsive,
+      traits.profile()
+    }, database);
 
   auto obstacle_trajectory2 = rmf_traffic::Trajectory();
   obstacle_trajectory2.insert(start_time, {-4, -3, 0}, {0, 0, 0});
@@ -92,11 +104,11 @@ int main(int argc, char* argv[])
   auto trajectory = rmf_traffic::Trajectory();
   trajectory.insert(start_time, {1, 1, M_PI + M_PI_4}, {0, 0, 0});
   trajectory.insert(
-      rmf_traffic::time::apply_offset(start_time,5), {0, 0, M_PI + M_PI_4},
+    rmf_traffic::time::apply_offset(start_time, 5), {0, 0, M_PI + M_PI_4},
     {0, 0, 0});
   trajectory.insert(
-      rmf_traffic::time::apply_offset(start_time,15), {-4, -3, M_PI + M_PI_4},
-      {0, 0, 0});
+    rmf_traffic::time::apply_offset(start_time, 15), {-4, -3, M_PI + M_PI_4},
+    {0, 0, 0});
   auto route = rmf_traffic::Route("test_map", trajectory);
   std::vector<rmf_traffic::Route> routes;
   routes.push_back(route);
@@ -109,9 +121,12 @@ int main(int argc, char* argv[])
     std::make_shared<rmf_freespace_planner::kinodynamic_rrt_star::Posq>(
     obstacle_validator, 0.1);
 
+  std::thread estimated_cost_thread(get_estimated_cost, posq);
+
   auto start_timing = std::chrono::steady_clock::now();
   const auto& freespace_routes = posq->make_plan(routes);
   auto end_timing = std::chrono::steady_clock::now();
+  done = true;
   std::cout << "-------------------------" << std::endl;
   std::cout << "Time taken for make_plan " <<
     std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -187,6 +202,7 @@ int main(int argc, char* argv[])
     sleep(1);
   }
 
+  estimated_cost_thread.join();
   rclcpp::shutdown();
   return 0;
 }

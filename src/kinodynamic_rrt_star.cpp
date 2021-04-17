@@ -18,6 +18,7 @@
 #include "rmf_freespace_planner/kinodynamic_rrt_star.hpp"
 
 #include <stack>
+#include <utility>
 
 namespace rmf_freespace_planner {
 namespace kinodynamic_rrt_star {
@@ -25,17 +26,17 @@ namespace kinodynamic_rrt_star {
 KinodynamicRRTStar::State::State(
   Eigen::Vector3d position,
   Eigen::Vector3d velocity,
-  double distance_x)
+  Eigen::Vector2d distance)
 : position(std::move(position)),
   velocity(std::move(velocity)),
-  distance_x(distance_x)
+  distance(std::move(distance))
 {
 }
 
 KinodynamicRRTStar::State::State(
   const rmf_traffic::Trajectory::Waypoint& waypoint,
-  double distance_x)
-: State(waypoint.position(), waypoint.velocity(), distance_x)
+  Eigen::Vector2d distance)
+: State(waypoint.position(), waypoint.velocity(), std::move(distance))
 {
 }
 
@@ -57,7 +58,10 @@ KinodynamicRRTStar::KinodynamicRRTStar(
 : FreespacePlanner(std::move(validator)),
   sample_time(sample_time),
   goal_vertex(nullptr),
-  gen(rd())
+  gen(rd()),
+  estimated_total_cost(0.0),
+  velocity(1.0),
+  min_goal_distance(std::numeric_limits<double>::max())
 {
 }
 
@@ -68,9 +72,9 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   vertex_list.clear();
 
   const auto start_vertex = std::make_shared<Vertex>(
-      State{start, 0},
-      nullptr,
-      0.0);
+    State{start, {0.0, 0.0}},
+    nullptr,
+    0.0);
   start_vertex->trajectory.insert(start);
   vertex_list.push_back(start_vertex);
 
@@ -78,7 +82,13 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     hypot(start.position().x() - goal.position().x(),
       start.position().y() - goal.position().y());
 
-  goal_vertex = std::make_shared<Vertex>(State{goal, length}, nullptr, 0.0);
+  estimated_total_cost = length * velocity;
+  min_goal_distance = length;
+
+  goal_vertex = std::make_shared<Vertex>(
+    State{goal, {length, 0.0}},
+    nullptr,
+    0.0);
 
   Eigen::Matrix<double, 6, 2> state_limits;
   state_limits << 0, length,
@@ -94,9 +104,12 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   {
     std::shared_ptr<Vertex> vertex;
 
-    if (seed_vertices.empty()) {
+    if (seed_vertices.empty())
+    {
       vertex = generate_random_vertex(start, goal, state_limits);
-    } else {
+    }
+    else
+    {
       vertex = seed_vertices.front();
       seed_vertices.pop();
     }
@@ -107,6 +120,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
 
     if (closest_vertex)
     {
+      update_estimated_total_cost(vertex);
       rewire(vertex, close_vertices);
       vertex_list.push_back(vertex);
     }
@@ -140,7 +154,7 @@ generate_random_vertex(
   transform_point(start, goal, position.x(), position.y());
 
   return std::make_shared<Vertex>(
-    State{position, velocity, position.x()}, nullptr, 0.0);
+    State{position, velocity, {position.x(), position.y()}}, nullptr, 0.0);
 }
 
 std::queue<std::shared_ptr<KinodynamicRRTStar::Vertex>> KinodynamicRRTStar::
@@ -160,9 +174,9 @@ get_seed_vertices(
     Eigen::Vector3d position;
     position << x_value, 0.0, state_limits(2, 0);
     transform_point(start, goal, position.x(), position.y());
-    seed_vertices.push(std::make_shared<Vertex>(State{position,
-        Eigen::Vector3d::Zero(), x_value},
-      nullptr, 0.0));
+    seed_vertices.push(std::make_shared<Vertex>(
+        State{position, Eigen::Vector3d::Zero(), {x_value, 0.0}},
+        nullptr, 0.0));
   }
 
   for (double y_value = y_granularity; y_value <= state_limits(1, 1);
@@ -175,7 +189,7 @@ get_seed_vertices(
       position << x_value, y_value, state_limits(2, 0);
       transform_point(start, goal, position.x(), position.y());
       seed_vertices.push(std::make_shared<Vertex>(State{position,
-          Eigen::Vector3d::Zero(), x_value},
+          Eigen::Vector3d::Zero(), {x_value, y_value}},
         nullptr, 0.0));
     }
   }
@@ -190,7 +204,7 @@ get_seed_vertices(
       position << x_value, y_value, state_limits(2, 0);
       transform_point(start, goal, position.x(), position.y());
       seed_vertices.push(std::make_shared<Vertex>(State{position,
-          Eigen::Vector3d::Zero(), x_value},
+          Eigen::Vector3d::Zero(), {x_value, y_value}},
         nullptr, 0.0));
     }
   }
@@ -224,7 +238,7 @@ find_close_vertices(
 
   for (const auto& vertex : vertex_list)
   {
-    if (new_vertex->state.distance_x <= vertex->state.distance_x)
+    if (new_vertex->state.distance.x() <= vertex->state.distance.x())
     {
       continue;
     }
@@ -278,6 +292,8 @@ bool KinodynamicRRTStar::rewire(
       vertex->parent = random_vertex;
       vertex->trajectory = *trajectory;
       vertex->cost_to_parent = cost;
+
+      update_estimated_total_cost(vertex);
       propagate_cost(vertex);
     }
   }
@@ -308,6 +324,7 @@ bool KinodynamicRRTStar::rewire(
     goal_vertex->cost_to_parent = cost;
     goal_vertex->parent = random_vertex;
     goal_vertex->trajectory = *trajectory;
+    estimated_total_cost = goal_vertex->cost_to_root;
     return true;
   }
   return false;
@@ -322,6 +339,7 @@ void KinodynamicRRTStar::propagate_cost(
     {
       vertex->cost_to_root = parent_vertex->cost_to_root +
         vertex->cost_to_parent;
+      update_estimated_total_cost(vertex);
       propagate_cost(vertex);
     }
   }
@@ -346,6 +364,18 @@ void KinodynamicRRTStar::construct_trajectory(
       trajectory->insert(waypoint);
     }
     path.pop();
+  }
+}
+
+void KinodynamicRRTStar::update_estimated_total_cost(
+  const std::shared_ptr<Vertex>& vertex)
+{
+  double goal_distance = hypot(vertex->state.x() - goal_vertex->state.x(),
+      vertex->state.y() - goal_vertex->state.y());
+  if (goal_distance < min_goal_distance)
+  {
+    min_goal_distance = goal_distance;
+    estimated_total_cost = vertex->cost_to_root + goal_distance * velocity;
   }
 }
 }
