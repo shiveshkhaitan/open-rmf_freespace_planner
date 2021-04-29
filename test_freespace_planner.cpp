@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
 
   auto posq =
     std::make_shared<rmf_freespace_planner::kinodynamic_rrt_star::Posq>(
-    obstacle_validator, 0.1);
+      obstacle_validator, database, rmf_utils::nullopt, 0.1);
 
   std::thread estimated_cost_thread(get_estimated_cost, posq);
 

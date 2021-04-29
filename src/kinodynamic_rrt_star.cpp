@@ -17,6 +17,11 @@
 
 #include "rmf_freespace_planner/kinodynamic_rrt_star.hpp"
 
+#include <rmf_traffic/DetectConflict.hpp>
+#include <rmf_traffic/geometry/Circle.hpp>
+#include <rmf_traffic/Motion.hpp>
+#include <rmf_traffic/schedule/Database.hpp>
+
 #include <stack>
 #include <utility>
 
@@ -54,8 +59,12 @@ KinodynamicRRTStar::Vertex::Vertex(
 
 KinodynamicRRTStar::KinodynamicRRTStar(
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
+  std::shared_ptr<rmf_traffic::schedule::Database> database,
+  rmf_utils::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
   double sample_time)
 : FreespacePlanner(std::move(validator)),
+  database(std::move(database)),
+  excluded_participants(std::move(excluded_participants)),
   sample_time(sample_time),
   goal_vertex(nullptr),
   gen(rd()),
@@ -111,7 +120,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     else
     {
       vertex = seed_vertices.front();
-      seed_vertices.pop();
+      seed_vertices.pop_front();
     }
 
     std::vector<std::shared_ptr<Vertex>> close_vertices;
@@ -157,57 +166,79 @@ generate_random_vertex(
     State{position, velocity, {position.x(), position.y()}}, nullptr, 0.0);
 }
 
-std::queue<std::shared_ptr<KinodynamicRRTStar::Vertex>> KinodynamicRRTStar::
+bool KinodynamicRRTStar::compare_vertices(
+  std::shared_ptr<Vertex>& vertex1,
+  std::shared_ptr<Vertex>& vertex2)
+{
+  return vertex1->state.distance.x() < vertex2->state.distance.x();
+}
+
+std::deque<std::shared_ptr<KinodynamicRRTStar::Vertex>> KinodynamicRRTStar::
 get_seed_vertices(
   const rmf_traffic::Trajectory::Waypoint& start,
   const rmf_traffic::Trajectory::Waypoint& goal,
   const Eigen::Matrix<double, 6, 2>& state_limits)
 {
-  std::queue<std::shared_ptr<KinodynamicRRTStar::Vertex>> seed_vertices;
-  seed_vertices.push(goal_vertex);
+  std::deque<std::shared_ptr<Vertex>> seed_vertices;
 
-  double x_granularity = (state_limits(0, 1) - state_limits(0, 0)) / 10.0;
-  double y_granularity = 0.25;
-  for (double x_value = state_limits(0, 1) - x_granularity;
-    x_value >= state_limits(0, 0); x_value -= x_granularity)
-  {
-    Eigen::Vector3d position;
-    position << x_value, 0.0, state_limits(2, 0);
-    transform_point(start, goal, position.x(), position.y());
-    seed_vertices.push(std::make_shared<Vertex>(
-        State{position, Eigen::Vector3d::Zero(), {x_value, 0.0}},
-        nullptr, 0.0));
-  }
+  rmf_traffic::Trajectory trajectory;
+  trajectory.insert(start);
+  trajectory.insert(goal);
 
-  for (double y_value = y_granularity; y_value <= state_limits(1, 1);
-    y_value += y_granularity)
+  rmf_traffic::Profile profile{rmf_traffic::geometry::make_final_convex(
+      rmf_traffic::geometry::Circle(0.5))};
+
+  for (const auto& participant_id : database->participant_ids())
   {
-    for (double x_value = state_limits(0, 1); x_value >= state_limits(0, 0);
-      x_value -= x_granularity)
+    if (excluded_participants.has_value())
     {
-      Eigen::Vector3d position;
-      position << x_value, y_value, state_limits(2, 0);
-      transform_point(start, goal, position.x(), position.y());
-      seed_vertices.push(std::make_shared<Vertex>(State{position,
-          Eigen::Vector3d::Zero(), {x_value, y_value}},
-        nullptr, 0.0));
+      if (excluded_participants.value().find(participant_id) !=
+        excluded_participants.value().end())
+      {
+        continue;
+      }
+    }
+    const auto& itinerary = database->get_itinerary(participant_id);
+    const auto& participant = database->get_participant(participant_id);
+
+    const auto& participant_profile = participant->profile();
+    if (itinerary.has_value())
+    {
+      const auto& routes = itinerary.value();
+      for (const auto& route : routes)
+      {
+        auto time = rmf_traffic::DetectConflict::between(
+          participant_profile, route->trajectory(), profile, trajectory);
+        if (time.has_value())
+        {
+          const auto& motion = rmf_traffic::Motion::compute_cubic_splines(
+            trajectory);
+          auto position = motion->compute_position(time.value());
+
+          Eigen::Vector3d seed_point;
+
+          seed_point << (position - start.position()).norm(), -0.5,
+            state_limits(2, 0);
+          transform_point(start, goal, seed_point.x(), seed_point.y());
+
+          seed_vertices.push_back(std::make_shared<Vertex>(
+              State{seed_point, Eigen::Vector3d::Zero(),
+                {(position - start.position()).norm(), -0.5}},
+              nullptr, 0.0));
+
+          seed_point << (position - start.position()).norm(), 0.5, state_limits(
+            2, 0);
+          transform_point(start, goal, seed_point.x(), seed_point.y());
+          seed_vertices.push_back(std::make_shared<Vertex>(
+              State{seed_point, Eigen::Vector3d::Zero(),
+                {(position - start.position()).norm(), 0.5}},
+              nullptr, 0.0));
+        }
+      }
     }
   }
-
-  for (double y_value = -y_granularity; y_value >= state_limits(1, 0);
-    y_value -= y_granularity)
-  {
-    for (double x_value = state_limits(0, 1); x_value >= state_limits(0, 0);
-      x_value -= x_granularity)
-    {
-      Eigen::Vector3d position;
-      position << x_value, y_value, state_limits(2, 0);
-      transform_point(start, goal, position.x(), position.y());
-      seed_vertices.push(std::make_shared<Vertex>(State{position,
-          Eigen::Vector3d::Zero(), {x_value, y_value}},
-        nullptr, 0.0));
-    }
-  }
+  std::sort(seed_vertices.begin(), seed_vertices.end(), compare_vertices);
+  seed_vertices.push_front(goal_vertex);
   return seed_vertices;
 }
 

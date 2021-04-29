@@ -22,7 +22,7 @@
 
 #include <Eigen/Core>
 
-#include <queue>
+#include <deque>
 #include <random>
 
 namespace rmf_freespace_planner {
@@ -32,6 +32,8 @@ class KinodynamicRRTStar : public FreespacePlanner
 public:
   KinodynamicRRTStar(
     rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
+    std::shared_ptr<rmf_traffic::schedule::Database> database,
+    rmf_utils::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
     double sample_time);
 
   struct State
@@ -118,7 +120,11 @@ private:
     const rmf_traffic::Trajectory::Waypoint& goal,
     const Eigen::Matrix<double, 6, 2>& state_limits);
 
-  std::queue<std::shared_ptr<Vertex>> get_seed_vertices(
+  static bool compare_vertices(
+    std::shared_ptr<Vertex>& vertex1,
+    std::shared_ptr<Vertex>& vertex2);
+
+  std::deque<std::shared_ptr<Vertex>> get_seed_vertices(
     const rmf_traffic::Trajectory::Waypoint& start,
     const rmf_traffic::Trajectory::Waypoint& goal,
     const Eigen::Matrix<double, 6, 2>& state_limits);
@@ -163,6 +169,11 @@ private:
   double velocity;
 
   double min_goal_distance;
+
+  std::shared_ptr<rmf_traffic::schedule::Database> database;
+
+  rmf_utils::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>>
+  excluded_participants;
 };
 }
 }

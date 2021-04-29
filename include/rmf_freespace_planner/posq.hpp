@@ -27,6 +27,8 @@ class Posq : public KinodynamicRRTStar
 public:
   Posq(
     rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
+    std::shared_ptr<rmf_traffic::schedule::Database> database,
+    rmf_utils::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
     double sample_time);
 
 private:
