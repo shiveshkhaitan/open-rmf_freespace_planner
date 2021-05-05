@@ -160,9 +160,9 @@ private:
     const std::shared_ptr<Vertex>& start,
     const std::shared_ptr<Vertex>& end) = 0;
 
-  void construct_trajectory(
+  rmf_traffic::Trajectory construct_trajectory(
     const std::shared_ptr<Vertex>& start_vertex,
-    const std::shared_ptr<rmf_traffic::Trajectory>& trajectory);
+    const rmf_traffic::Trajectory::Waypoint& start);
 
   void update_estimated_total_cost(const std::shared_ptr<Vertex>& vertex);
 

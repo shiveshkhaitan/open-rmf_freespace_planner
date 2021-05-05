@@ -143,11 +143,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     }
   }
 
-  auto trajectory = std::make_shared<rmf_traffic::Trajectory>();
-  trajectory->insert(start);
-  construct_trajectory(start_vertex, trajectory);
-
-  return *trajectory;
+  return construct_trajectory(start_vertex, start);
 }
 
 std::shared_ptr<KinodynamicRRTStar::Vertex> KinodynamicRRTStar::
@@ -356,10 +352,13 @@ void KinodynamicRRTStar::propagate_cost(
   }
 }
 
-void KinodynamicRRTStar::construct_trajectory(
+rmf_traffic::Trajectory KinodynamicRRTStar::construct_trajectory(
   const std::shared_ptr<Vertex>& start_vertex,
-  const std::shared_ptr<rmf_traffic::Trajectory>& trajectory)
+  const rmf_traffic::Trajectory::Waypoint& start)
 {
+  rmf_traffic::Trajectory trajectory;
+  trajectory.insert(start);
+
   std::shared_ptr<Vertex> vertex = goal_vertex;
   std::stack<std::shared_ptr<Vertex>> path;
   while (vertex != start_vertex)
@@ -372,10 +371,12 @@ void KinodynamicRRTStar::construct_trajectory(
     vertex = path.top();
     for (const auto& waypoint : vertex->trajectory)
     {
-      trajectory->insert(waypoint);
+      trajectory.insert(waypoint);
     }
     path.pop();
   }
+
+  return trajectory;
 }
 
 void KinodynamicRRTStar::update_estimated_total_cost(
