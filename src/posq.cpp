@@ -42,9 +42,8 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   const std::shared_ptr<Vertex>& start,
   const std::shared_ptr<Vertex>& end)
 {
-  Eigen::Vector3d x0, x1;
-  x0 << start->state.x(), start->state.y(), start->state.yaw();
-  x1 << end->state.x(), end->state.y(), end->state.yaw();
+  Eigen::Vector3d x0(start->state.x(), start->state.y(), start->state.yaw());
+  Eigen::Vector3d x1(end->state.x(), end->state.y(), end->state.yaw());
 
   double t = 0.0;
 
@@ -155,10 +154,7 @@ Eigen::Vector3d Posq::step(
   double vd = (k_alpha * alpha + k_beta * beta);
   eot = (rho < rho_end);
 
-  Eigen::Vector3d velocity;
-  velocity << vm, 0.0, vd;
-
-  return velocity;
+  return Eigen::Vector3d(vm, 0.0, vd);
 }
 
 double Posq::norm_angle(double theta, double start)

@@ -159,10 +159,8 @@ generate_random_vertex(
   std::uniform_real_distribution<> vy(state_limits(4, 0), state_limits(4, 1));
   std::uniform_real_distribution<> vyaw(state_limits(5, 0), state_limits(5, 1));
 
-  Eigen::Vector3d position;
-  position << x(gen), y(gen), state_limits(2, 0);
-  Eigen::Vector3d velocity;
-  velocity << vx(gen), vy(gen), vyaw(gen);
+  Eigen::Vector3d position(x(gen), y(gen), state_limits(2, 0));
+  Eigen::Vector3d velocity(vx(gen), vy(gen), vyaw(gen));
 
   position.head<2>() = transform_point(start, goal, position.head<2>());
 
