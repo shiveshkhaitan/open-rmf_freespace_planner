@@ -97,6 +97,12 @@ public:
     rmf_traffic::Trajectory trajectory;
   };
 
+  struct ComputedTrajectory
+  {
+    rmf_traffic::Trajectory trajectory;
+    double cost;
+  };
+
   std::vector<std::shared_ptr<Vertex>> get_vertices()
   {
     return vertex_list;
@@ -144,10 +150,9 @@ private:
 
   void propagate_cost(const std::shared_ptr<Vertex>& parent_vertex);
 
-  virtual std::optional<double> compute_trajectory(
+  virtual std::optional<ComputedTrajectory> compute_trajectory(
     const std::shared_ptr<Vertex>& start,
-    const std::shared_ptr<Vertex>& end,
-    const std::shared_ptr<rmf_traffic::Trajectory>& trajectory) = 0;
+    const std::shared_ptr<Vertex>& end) = 0;
 
   void construct_trajectory(
     const std::shared_ptr<Vertex>& start_vertex,

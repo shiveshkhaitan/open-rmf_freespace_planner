@@ -57,9 +57,8 @@ std::vector<rmf_traffic::Route> FreespacePlanner::make_plan(
   return planned_routes;
 }
 
-bool FreespacePlanner::has_conflict(
-  const std::shared_ptr<rmf_traffic::Trajectory>& trajectory)
+bool FreespacePlanner::has_conflict(rmf_traffic::Trajectory trajectory)
 {
-  return validator->find_conflict({map, *trajectory}).has_value();
+  return validator->find_conflict({map, std::move(trajectory)}).has_value();
 }
 }

@@ -191,8 +191,8 @@ get_seed_vertices(
   {
     if (excluded_participants.has_value())
     {
-      if (excluded_participants.value().find(participant_id) !=
-        excluded_participants.value().end())
+      if (excluded_participants->find(participant_id) !=
+        excluded_participants->end())
       {
         continue;
       }
@@ -266,7 +266,7 @@ find_close_vertices(
 {
   double cost = std::numeric_limits<double>::max();
   std::shared_ptr<Vertex> closest_vertex;
-  std::shared_ptr<rmf_traffic::Trajectory> trajectory;
+  rmf_traffic::Trajectory expansion_trajectory;
 
   for (const auto& vertex : vertex_list)
   {
@@ -274,29 +274,28 @@ find_close_vertices(
     {
       continue;
     }
-    auto _trajectory = std::make_shared<rmf_traffic::Trajectory>();
-    _trajectory->insert(vertex->trajectory.back());
 
-    auto _cost = compute_trajectory(vertex, new_vertex, _trajectory);
-    if (!_cost.has_value())
+    auto test_trajectory = compute_trajectory(vertex, new_vertex);
+
+    if (!test_trajectory.has_value())
     {
       continue;
     }
 
-    if (!has_conflict(_trajectory))
+    if (!has_conflict(test_trajectory->trajectory))
     {
       close_vertices.push_back(vertex);
-      if (cost > _cost.value() + vertex->cost_to_root)
+      if (cost > test_trajectory->cost + vertex->cost_to_root)
       {
-        cost = _cost.value() + vertex->cost_to_root;
+        cost = test_trajectory->cost + vertex->cost_to_root;
         closest_vertex = vertex;
-        trajectory = _trajectory;
+        expansion_trajectory = std::move(test_trajectory->trajectory);
       }
     }
   }
   if (closest_vertex)
   {
-    new_vertex->trajectory = *trajectory;
+    new_vertex->trajectory = std::move(expansion_trajectory);
     new_vertex->parent = closest_vertex;
     new_vertex->cost_to_root = cost;
     new_vertex->cost_to_parent = cost - closest_vertex->cost_to_root;
@@ -310,30 +309,29 @@ bool KinodynamicRRTStar::rewire(
 {
   for (const auto& vertex : close_vertices)
   {
-    auto trajectory = std::make_shared<rmf_traffic::Trajectory>();
-    trajectory->insert(random_vertex->trajectory.back());
-    auto cost = compute_trajectory(random_vertex, vertex, trajectory);
-    if (!cost.has_value())
+    auto test_trajectory = compute_trajectory(random_vertex, vertex);
+    if (!test_trajectory.has_value())
     {
       continue;
     }
-    if (vertex->cost_to_root > random_vertex->cost_to_root + cost.value() &&
-      !has_conflict(trajectory))
+    if (vertex->cost_to_root >
+      random_vertex->cost_to_root + test_trajectory->cost &&
+      !has_conflict(test_trajectory->trajectory))
     {
-      vertex->cost_to_root = random_vertex->cost_to_root + cost.value();
+      vertex->cost_to_root =
+        random_vertex->cost_to_root + test_trajectory->cost;
       vertex->parent = random_vertex;
-      vertex->trajectory = *trajectory;
-      vertex->cost_to_parent = cost.value();
+      vertex->trajectory = std::move(test_trajectory->trajectory);
+      vertex->cost_to_parent = test_trajectory->cost;
 
       update_estimated_total_cost(vertex);
       propagate_cost(vertex);
     }
   }
 
-  auto trajectory = std::make_shared<rmf_traffic::Trajectory>();
-  trajectory->insert(random_vertex->trajectory.back());
-  auto cost = compute_trajectory(random_vertex, goal_vertex, trajectory);
-  if (!cost.has_value())
+  auto test_trajectory = compute_trajectory(random_vertex, goal_vertex);
+
+  if (!test_trajectory.has_value())
   {
     return false;
   }
@@ -341,21 +339,23 @@ bool KinodynamicRRTStar::rewire(
   bool rewire = false;
   if (goal_vertex->parent)
   {
-    if (goal_vertex->cost_to_root > random_vertex->cost_to_root + cost.value())
+    if (goal_vertex->cost_to_root >
+      random_vertex->cost_to_root + test_trajectory->cost)
     {
-      rewire = !has_conflict(trajectory);
+      rewire = !has_conflict(test_trajectory->trajectory);
     }
   }
   else
   {
-    rewire = !has_conflict(trajectory);
+    rewire = !has_conflict(test_trajectory->trajectory);
   }
   if (rewire)
   {
-    goal_vertex->cost_to_root = random_vertex->cost_to_root + cost.value();
-    goal_vertex->cost_to_parent = cost.value();
+    goal_vertex->cost_to_root =
+      random_vertex->cost_to_root + test_trajectory->cost;
+    goal_vertex->cost_to_parent = test_trajectory->cost;
     goal_vertex->parent = random_vertex;
-    goal_vertex->trajectory = *trajectory;
+    goal_vertex->trajectory = std::move(test_trajectory->trajectory);
     estimated_total_cost = goal_vertex->cost_to_root;
     return true;
   }

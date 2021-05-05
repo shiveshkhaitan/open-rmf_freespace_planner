@@ -32,10 +32,9 @@ public:
     double sample_time);
 
 private:
-  std::optional<double> compute_trajectory(
+  std::optional<ComputedTrajectory> compute_trajectory(
     const std::shared_ptr<Vertex>& start,
-    const std::shared_ptr<Vertex>& end,
-    const std::shared_ptr<rmf_traffic::Trajectory>& trajectory) override;
+    const std::shared_ptr<Vertex>& end) override;
 
   Eigen::Vector3d step(
     double t,

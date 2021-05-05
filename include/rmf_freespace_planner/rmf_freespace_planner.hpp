@@ -33,7 +33,7 @@ public:
     const std::vector<rmf_traffic::Route>& route);
 
 protected:
-  bool has_conflict(const std::shared_ptr<rmf_traffic::Trajectory>& trajectory);
+  bool has_conflict(rmf_traffic::Trajectory trajectory);
 
 private:
   virtual rmf_traffic::Trajectory plan(

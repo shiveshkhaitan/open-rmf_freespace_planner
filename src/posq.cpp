@@ -38,10 +38,9 @@ Posq::Posq(
   vmax = 1.0;
 }
 
-std::optional<double> Posq::compute_trajectory(
+std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   const std::shared_ptr<Vertex>& start,
-  const std::shared_ptr<Vertex>& end,
-  const std::shared_ptr<rmf_traffic::Trajectory>& trajectory)
+  const std::shared_ptr<Vertex>& end)
 {
   Eigen::Vector3d x0, x1;
   x0 << start->state.x(), start->state.y(), start->state.yaw();
@@ -58,6 +57,9 @@ std::optional<double> Posq::compute_trajectory(
   double old_beta = 0;
 
   double cost = 0.0;
+
+  rmf_traffic::Trajectory trajectory;
+  trajectory.insert(start->trajectory.back());
 
   while (!eot)
   {
@@ -84,18 +86,18 @@ std::optional<double> Posq::compute_trajectory(
     sl += vl * sample_time;
     sr += vr * sample_time;
 
-    trajectory->insert(rmf_traffic::time::apply_offset(trajectory->back().time(),
+    trajectory.insert(rmf_traffic::time::apply_offset(trajectory.back().time(),
       sample_time),
       x0, velocity);
     cost += sample_time;
     cost += 0.01 * ( /*velocity(0) * velocity(0)*/ +velocity(2) * velocity(2));
   }
 
-  if (trajectory->size() < 2)
+  if (trajectory.size() < 2)
   {
     return std::nullopt;
   }
-  return cost;
+  return ComputedTrajectory{trajectory, cost};
 }
 
 Eigen::Vector3d Posq::step(
