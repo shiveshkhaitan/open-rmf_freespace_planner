@@ -150,9 +150,9 @@ private:
 
   Neighborhood find_close_vertices(const std::shared_ptr<Vertex>& new_vertex);
 
-  bool rewire(
-    const std::shared_ptr<Vertex>& vertex,
-    const std::vector<std::shared_ptr<Vertex>>& close_vertices);
+  void rewire(
+    const std::shared_ptr<Vertex>& new_vertex,
+    const std::shared_ptr<Vertex>& vertex_to_rewire);
 
   void propagate_cost(const std::shared_ptr<Vertex>& parent_vertex);
 

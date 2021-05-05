@@ -96,7 +96,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   goal_vertex = std::make_shared<Vertex>(
     State{goal, {length, 0.0}},
     nullptr,
-    0.0);
+    std::numeric_limits<double>::max());
 
   Eigen::Matrix<double, 6, 2> state_limits;
   state_limits << 0, length,
@@ -133,7 +133,12 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
       vertex->cost_to_parent = cost - closest_vertex->cost_to_root;
 
       update_estimated_total_cost(vertex);
-      rewire(vertex, close_vertices);
+
+      for (auto close_vertex : close_vertices)
+      {
+        rewire(vertex, close_vertex);
+      }
+      rewire(vertex, goal_vertex);
       vertex_list.push_back(vertex);
     }
   }
@@ -302,67 +307,32 @@ KinodynamicRRTStar::Neighborhood KinodynamicRRTStar::find_close_vertices(
     neighborhood.trajectory = std::move(expansion_trajectory);
     neighborhood.cost = cost;
   }
-  neighborhood.closest_vertex = closest_vertex;
+  neighborhood.closest_vertex = std::move(closest_vertex);
   return neighborhood;
 }
 
-bool KinodynamicRRTStar::rewire(
+void KinodynamicRRTStar::rewire(
   const std::shared_ptr<Vertex>& random_vertex,
-  const std::vector<std::shared_ptr<Vertex>>& close_vertices)
+  const std::shared_ptr<Vertex>& vertex_to_rewire)
 {
-  for (const auto& vertex : close_vertices)
-  {
-    auto test_trajectory = compute_trajectory(random_vertex, vertex);
-    if (!test_trajectory.has_value())
-    {
-      continue;
-    }
-    if (vertex->cost_to_root >
-      random_vertex->cost_to_root + test_trajectory->cost &&
-      !has_conflict(test_trajectory->trajectory))
-    {
-      vertex->cost_to_root =
-        random_vertex->cost_to_root + test_trajectory->cost;
-      vertex->parent = random_vertex;
-      vertex->trajectory = std::move(test_trajectory->trajectory);
-      vertex->cost_to_parent = test_trajectory->cost;
-
-      update_estimated_total_cost(vertex);
-      propagate_cost(vertex);
-    }
-  }
-
-  auto test_trajectory = compute_trajectory(random_vertex, goal_vertex);
-
+  auto test_trajectory = compute_trajectory(random_vertex, vertex_to_rewire);
   if (!test_trajectory.has_value())
   {
-    return false;
+    return;
   }
-
-  bool rewire = false;
-  if (goal_vertex->parent)
+  if (vertex_to_rewire->cost_to_root >
+    random_vertex->cost_to_root + test_trajectory->cost &&
+    !has_conflict(test_trajectory->trajectory))
   {
-    if (goal_vertex->cost_to_root >
-      random_vertex->cost_to_root + test_trajectory->cost)
-    {
-      rewire = !has_conflict(test_trajectory->trajectory);
-    }
-  }
-  else
-  {
-    rewire = !has_conflict(test_trajectory->trajectory);
-  }
-  if (rewire)
-  {
-    goal_vertex->cost_to_root =
+    vertex_to_rewire->cost_to_root =
       random_vertex->cost_to_root + test_trajectory->cost;
-    goal_vertex->cost_to_parent = test_trajectory->cost;
-    goal_vertex->parent = random_vertex;
-    goal_vertex->trajectory = std::move(test_trajectory->trajectory);
-    estimated_total_cost = goal_vertex->cost_to_root;
-    return true;
+    vertex_to_rewire->parent = random_vertex;
+    vertex_to_rewire->trajectory = std::move(test_trajectory->trajectory);
+    vertex_to_rewire->cost_to_parent = test_trajectory->cost;
+
+    update_estimated_total_cost(vertex_to_rewire);
+    propagate_cost(vertex_to_rewire);
   }
-  return false;
 }
 
 void KinodynamicRRTStar::propagate_cost(
@@ -405,6 +375,10 @@ void KinodynamicRRTStar::construct_trajectory(
 void KinodynamicRRTStar::update_estimated_total_cost(
   const std::shared_ptr<Vertex>& vertex)
 {
+  if (goal_vertex->parent)
+  {
+    estimated_total_cost = goal_vertex->cost_to_root;
+  }
   double goal_distance =
     (vertex->state.position.head<2>() - goal_vertex->state.position.head<2>())
     .norm();
