@@ -52,7 +52,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   double old_sl = 0.0;
   double old_sr = 0.0;
 
-  PosqState posq_state;
+  PosqState posq_state{};
   posq_state.beta = 0;
   posq_state.eot = false;
 
@@ -73,10 +73,12 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     x0(2) = norm_angle(x0(2) + dSd, -M_PI);
 
     posq_state = step(t, x0, x1, posq_state, true);
-    double vl = posq_state.velocity(0) - posq_state.velocity(2) * base / 2.0;
+    double vl = posq_state.DiffDriveVelocity.forward -
+      posq_state.DiffDriveVelocity.rotational * base / 2.0;
     vl = std::clamp(vl, -vmax, vmax);
 
-    double vr = posq_state.velocity(0) + posq_state.velocity(2) * base / 2.0;
+    double vr = posq_state.DiffDriveVelocity.forward +
+      posq_state.DiffDriveVelocity.rotational * base / 2.0;
     vr = std::clamp(vr, -vmax, vmax);
 
     t = t + sample_time;
@@ -89,9 +91,14 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     trajectory.insert(
       rmf_traffic::time::apply_offset(trajectory.back().time(), sample_time),
       x0,
-      posq_state.velocity);
+      Eigen::Vector3d(
+        posq_state.DiffDriveVelocity.forward,
+        0.0,
+        posq_state.DiffDriveVelocity.rotational));
     cost += sample_time;
-    cost += 0.01 * (posq_state.velocity(2) * posq_state.velocity(2));
+    cost += 0.01 *
+      (posq_state.DiffDriveVelocity.rotational *
+      posq_state.DiffDriveVelocity.rotational);
   }
 
   if (trajectory.size() < 2)
@@ -151,7 +158,7 @@ Posq::PosqState Posq::step(
   double vm = k_rho * tanh(f_rho * k_v);
   double vd = (k_alpha * alpha + k_beta * beta);
   posq_state_next.eot = (rho < rho_end);
-  posq_state_next.velocity = Eigen::Vector3d(vm, 0.0, vd);
+  posq_state_next.DiffDriveVelocity = {vm, vd};
 
   return posq_state_next;
 }

@@ -42,7 +42,11 @@ private:
 
     bool eot;
 
-    Eigen::Vector3d velocity;
+    struct
+    {
+      double forward;
+      double rotational;
+    } DiffDriveVelocity;
   };
 
   PosqState step(
