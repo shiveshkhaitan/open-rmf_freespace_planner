@@ -129,11 +129,10 @@ private:
     const rmf_traffic::Trajectory::Waypoint& goal,
     const Eigen::Matrix<double, 6, 2>& state_limits);
 
-  static void transform_point(
+  static Eigen::Vector2d transform_point(
     const rmf_traffic::Trajectory::Waypoint& start,
     const rmf_traffic::Trajectory::Waypoint& goal,
-    double& x,
-    double& y);
+    const Eigen::Vector2d& point);
 
   std::shared_ptr<Vertex> find_close_vertices(
     const std::shared_ptr<Vertex>& new_vertex,

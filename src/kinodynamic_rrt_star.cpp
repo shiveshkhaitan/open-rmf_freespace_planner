@@ -158,7 +158,7 @@ generate_random_vertex(
   Eigen::Vector3d velocity;
   velocity << vx(gen), vy(gen), vyaw(gen);
 
-  transform_point(start, goal, position.x(), position.y());
+  position.head(2) = transform_point(start, goal, position.head(2));
 
   return std::make_shared<Vertex>(
     State{position, velocity, {position.x(), position.y()}}, nullptr, 0.0);
@@ -217,7 +217,7 @@ get_seed_vertices(
 
           seed_point << (position - start.position()).norm(), -0.5,
             state_limits(2, 0);
-          transform_point(start, goal, seed_point.x(), seed_point.y());
+          seed_point.head(2) = transform_point(start, goal, seed_point.head(2));
 
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
@@ -226,7 +226,7 @@ get_seed_vertices(
 
           seed_point << (position - start.position()).norm(), 0.5, state_limits(
             2, 0);
-          transform_point(start, goal, seed_point.x(), seed_point.y());
+          seed_point.head(2) = transform_point(start, goal, seed_point.head(2));
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
                 {(position - start.position()).norm(), 0.5}},
@@ -240,20 +240,20 @@ get_seed_vertices(
   return seed_vertices;
 }
 
-void KinodynamicRRTStar::transform_point(
+Eigen::Vector2d KinodynamicRRTStar::transform_point(
   const rmf_traffic::Trajectory::Waypoint& start,
   const rmf_traffic::Trajectory::Waypoint& goal,
-  double& x,
-  double& y)
+  const Eigen::Vector2d& point)
 {
-  double _x = x, _y = y;
+  double _x = point.x(), _y = point.y();
   double x1 = start.position().x(), y1 = start.position().y(),
     x2 = goal.position().x(), y2 = goal.position().y();
 
   double theta = atan2(y2 - y1, x2 - x1);
 
-  x = x1 + _x * cos(theta) + _y * sin(theta);
-  y = y1 + _x * sin(theta) - _y * cos(theta);
+  return Eigen::Vector2d(
+    x1 + _x * cos(theta) + _y * sin(theta),
+    y1 + _x * sin(theta) - _y * cos(theta));
 }
 
 std::shared_ptr<KinodynamicRRTStar::Vertex> KinodynamicRRTStar::
