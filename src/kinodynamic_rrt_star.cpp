@@ -122,12 +122,16 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
       seed_vertices.pop_front();
     }
 
-    std::vector<std::shared_ptr<Vertex>> close_vertices;
-    const auto& closest_vertex = find_close_vertices(vertex,
-        close_vertices);
+    const auto& [closest_vertex, close_vertices, trajectory, cost] =
+      find_close_vertices(vertex);
 
     if (closest_vertex)
     {
+      vertex->parent = closest_vertex;
+      vertex->trajectory = std::move(trajectory);
+      vertex->cost_to_root = cost;
+      vertex->cost_to_parent = cost - closest_vertex->cost_to_root;
+
       update_estimated_total_cost(vertex);
       rewire(vertex, close_vertices);
       vertex_list.push_back(vertex);
@@ -259,14 +263,14 @@ Eigen::Vector2d KinodynamicRRTStar::transform_point(
     y1 + _x * sin(theta) - _y * cos(theta));
 }
 
-std::shared_ptr<KinodynamicRRTStar::Vertex> KinodynamicRRTStar::
-find_close_vertices(
-  const std::shared_ptr<Vertex>& new_vertex,
-  std::vector<std::shared_ptr<Vertex>>& close_vertices)
+KinodynamicRRTStar::Neighborhood KinodynamicRRTStar::find_close_vertices(
+  const std::shared_ptr<Vertex>& new_vertex)
 {
   double cost = std::numeric_limits<double>::max();
   std::shared_ptr<Vertex> closest_vertex;
   rmf_traffic::Trajectory expansion_trajectory;
+
+  Neighborhood neighborhood;
 
   for (const auto& vertex : vertex_list)
   {
@@ -284,7 +288,7 @@ find_close_vertices(
 
     if (!has_conflict(test_trajectory->trajectory))
     {
-      close_vertices.push_back(vertex);
+      neighborhood.close_vertices.push_back(vertex);
       if (cost > test_trajectory->cost + vertex->cost_to_root)
       {
         cost = test_trajectory->cost + vertex->cost_to_root;
@@ -295,12 +299,11 @@ find_close_vertices(
   }
   if (closest_vertex)
   {
-    new_vertex->trajectory = std::move(expansion_trajectory);
-    new_vertex->parent = closest_vertex;
-    new_vertex->cost_to_root = cost;
-    new_vertex->cost_to_parent = cost - closest_vertex->cost_to_root;
+    neighborhood.trajectory = std::move(expansion_trajectory);
+    neighborhood.cost = cost;
   }
-  return closest_vertex;
+  neighborhood.closest_vertex = closest_vertex;
+  return neighborhood;
 }
 
 bool KinodynamicRRTStar::rewire(

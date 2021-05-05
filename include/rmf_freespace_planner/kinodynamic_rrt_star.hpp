@@ -103,6 +103,14 @@ public:
     double cost;
   };
 
+  struct Neighborhood
+  {
+    std::shared_ptr<Vertex> closest_vertex;
+    std::vector<std::shared_ptr<Vertex>> close_vertices;
+    rmf_traffic::Trajectory trajectory;
+    double cost;
+  };
+
   std::vector<std::shared_ptr<Vertex>> get_vertices()
   {
     return vertex_list;
@@ -140,9 +148,7 @@ private:
     const rmf_traffic::Trajectory::Waypoint& goal,
     const Eigen::Vector2d& point);
 
-  std::shared_ptr<Vertex> find_close_vertices(
-    const std::shared_ptr<Vertex>& new_vertex,
-    std::vector<std::shared_ptr<Vertex>>& close_vertices);
+  Neighborhood find_close_vertices(const std::shared_ptr<Vertex>& new_vertex);
 
   bool rewire(
     const std::shared_ptr<Vertex>& vertex,
