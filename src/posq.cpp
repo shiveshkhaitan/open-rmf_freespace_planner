@@ -113,7 +113,7 @@ Eigen::Vector3d Posq::step(
 
   double dx = end(0) - start(0);
   double dy = end(1) - start(1);
-  double rho = hypot(dx, dy);
+  double rho = std::hypot(dx, dy);
   double f_rho = std::min(rho, vmax / k_rho);
 
   double alpha = norm_angle(atan2(dy, dx) - start(2), -M_PI);

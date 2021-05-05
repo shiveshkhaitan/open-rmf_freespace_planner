@@ -87,9 +87,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   start_vertex->trajectory.insert(start);
   vertex_list.push_back(start_vertex);
 
-  double length =
-    hypot(start.position().x() - goal.position().x(),
-      start.position().y() - goal.position().y());
+  double length = (start.position().head(2) - goal.position().head(2)).norm();
 
   estimated_total_cost = length * velocity;
   min_goal_distance = length;
@@ -401,8 +399,10 @@ void KinodynamicRRTStar::construct_trajectory(
 void KinodynamicRRTStar::update_estimated_total_cost(
   const std::shared_ptr<Vertex>& vertex)
 {
-  double goal_distance = hypot(vertex->state.x() - goal_vertex->state.x(),
-      vertex->state.y() - goal_vertex->state.y());
+  double goal_distance =
+    (vertex->state.position.head(2) - goal_vertex->state.position.head(2))
+    .norm();
+
   if (goal_distance < min_goal_distance)
   {
     min_goal_distance = goal_distance;
