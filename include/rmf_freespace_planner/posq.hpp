@@ -36,12 +36,20 @@ private:
     const std::shared_ptr<Vertex>& start,
     const std::shared_ptr<Vertex>& end) override;
 
-  Eigen::Vector3d step(
+  struct PosqState
+  {
+    double beta;
+
+    bool eot;
+
+    Eigen::Vector3d velocity;
+  };
+
+  PosqState step(
     double t,
     const Eigen::Vector3d& start,
     const Eigen::Vector3d& end,
-    double& old_beta,
-    bool& eot,
+    const PosqState& posq_state,
     bool forward = true) const;
 
   static double norm_angle(double theta, double start = 0.0);

@@ -52,15 +52,16 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   double old_sl = 0.0;
   double old_sr = 0.0;
 
-  bool eot = false;
-  double old_beta = 0;
+  PosqState posq_state;
+  posq_state.beta = 0;
+  posq_state.eot = false;
 
   double cost = 0.0;
 
   rmf_traffic::Trajectory trajectory;
   trajectory.insert(start->trajectory.back());
 
-  while (!eot)
+  while (!posq_state.eot)
   {
     double dSl = sl - old_sl;
     double dSr = sr - old_sr;
@@ -71,11 +72,11 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     x0(1) = x0(1) + dSm * sin(x0(2) + dSd / 2.0);
     x0(2) = norm_angle(x0(2) + dSd, -M_PI);
 
-    auto velocity = step(t, x0, x1, old_beta, eot, true);
-    double vl = velocity(0) - velocity(2) * base / 2.0;
+    posq_state = step(t, x0, x1, posq_state, true);
+    double vl = posq_state.velocity(0) - posq_state.velocity(2) * base / 2.0;
     vl = std::clamp(vl, -vmax, vmax);
 
-    double vr = velocity(0) + velocity(2) * base / 2.0;
+    double vr = posq_state.velocity(0) + posq_state.velocity(2) * base / 2.0;
     vr = std::clamp(vr, -vmax, vmax);
 
     t = t + sample_time;
@@ -85,11 +86,12 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     sl += vl * sample_time;
     sr += vr * sample_time;
 
-    trajectory.insert(rmf_traffic::time::apply_offset(trajectory.back().time(),
-      sample_time),
-      x0, velocity);
+    trajectory.insert(
+      rmf_traffic::time::apply_offset(trajectory.back().time(), sample_time),
+      x0,
+      posq_state.velocity);
     cost += sample_time;
-    cost += 0.01 * ( /*velocity(0) * velocity(0)*/ +velocity(2) * velocity(2));
+    cost += 0.01 * (posq_state.velocity(2) * posq_state.velocity(2));
   }
 
   if (trajectory.size() < 2)
@@ -99,18 +101,14 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   return ComputedTrajectory{trajectory, cost};
 }
 
-Eigen::Vector3d Posq::step(
+Posq::PosqState Posq::step(
   double t,
   const Eigen::Vector3d& start,
   const Eigen::Vector3d& end,
-  double& old_beta,
-  bool& eot,
+  const PosqState& posq_state,
   bool forward) const
 {
-  if (t == 0)
-  {
-    old_beta = 0;
-  }
+  PosqState posq_state_next;
 
   double dx = end(0) - start(0);
   double dy = end(1) - start(1);
@@ -144,17 +142,18 @@ Eigen::Vector3d Posq::step(
   double phi = end(2) - start(2);
   phi = norm_angle(phi, -M_PI);
   double beta = norm_angle(phi - alpha, -M_PI);
-  if (abs(old_beta - beta) > M_PI)
+  if (abs(posq_state.beta - beta) > M_PI)
   {
-    beta = old_beta;
+    beta = posq_state.beta;
   }
-  old_beta = beta;
+  posq_state_next.beta = beta;
 
   double vm = k_rho * tanh(f_rho * k_v);
   double vd = (k_alpha * alpha + k_beta * beta);
-  eot = (rho < rho_end);
+  posq_state_next.eot = (rho < rho_end);
+  posq_state_next.velocity = Eigen::Vector3d(vm, 0.0, vd);
 
-  return Eigen::Vector3d(vm, 0.0, vd);
+  return posq_state_next;
 }
 
 double Posq::norm_angle(double theta, double start)
