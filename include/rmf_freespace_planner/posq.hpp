@@ -15,8 +15,8 @@
  *
 */
 
-#ifndef RMF_FREESPACE_PLANNER_POSQ_HPP_
-#define RMF_FREESPACE_PLANNER_POSQ_HPP_
+#ifndef RMF_FREESPACE_PLANNER__POSQ_HPP
+#define RMF_FREESPACE_PLANNER__POSQ_HPP
 
 #include "rmf_freespace_planner/kinodynamic_rrt_star.hpp"
 
@@ -58,4 +58,4 @@ private:
 }
 }
 
-#endif //RMF_FREESPACE_PLANNER_POSQ_HPP_
+#endif //RMF_FREESPACE_PLANNER__POSQ_HPP
