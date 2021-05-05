@@ -257,15 +257,17 @@ Eigen::Vector2d KinodynamicRRTStar::transform_point(
   const rmf_traffic::Trajectory::Waypoint& goal,
   const Eigen::Vector2d& point)
 {
-  double _x = point.x(), _y = point.y();
-  double x1 = start.position().x(), y1 = start.position().y(),
-    x2 = goal.position().x(), y2 = goal.position().y();
+  double x1 = start.position().x();
+  double y1 = start.position().y();
+  double x2 = goal.position().x();
+  double y2 = goal.position().y();
 
-  double theta = atan2(y2 - y1, x2 - x1);
+  Eigen::Isometry2d transformed_point = Eigen::Isometry2d::Identity();
+  transformed_point.translate(Eigen::Vector2d(x1, y1));
+  transformed_point.rotate(Eigen::Rotation2Dd(atan2(y2 - y1, x2 - x1)));
+  transformed_point.translate(point);
 
-  return Eigen::Vector2d(
-    x1 + _x * cos(theta) + _y * sin(theta),
-    y1 + _x * sin(theta) - _y * cos(theta));
+  return transformed_point.translation().transpose();
 }
 
 KinodynamicRRTStar::Neighborhood KinodynamicRRTStar::find_close_vertices(
