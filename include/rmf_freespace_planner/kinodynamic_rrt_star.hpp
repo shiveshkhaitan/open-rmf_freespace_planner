@@ -144,7 +144,7 @@ private:
 
   void propagate_cost(const std::shared_ptr<Vertex>& parent_vertex);
 
-  virtual double compute_trajectory(
+  virtual std::optional<double> compute_trajectory(
     const std::shared_ptr<Vertex>& start,
     const std::shared_ptr<Vertex>& end,
     const std::shared_ptr<rmf_traffic::Trajectory>& trajectory) = 0;

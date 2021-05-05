@@ -38,7 +38,7 @@ Posq::Posq(
   vmax = 1.0;
 }
 
-double Posq::compute_trajectory(
+std::optional<double> Posq::compute_trajectory(
   const std::shared_ptr<Vertex>& start,
   const std::shared_ptr<Vertex>& end,
   const std::shared_ptr<rmf_traffic::Trajectory>& trajectory)
@@ -93,7 +93,7 @@ double Posq::compute_trajectory(
 
   if (trajectory->size() < 2)
   {
-    return -1.0;
+    return std::nullopt;
   }
   return cost;
 }
