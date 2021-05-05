@@ -166,8 +166,8 @@ generate_random_vertex(
 }
 
 bool KinodynamicRRTStar::compare_vertices(
-  std::shared_ptr<Vertex>& vertex1,
-  std::shared_ptr<Vertex>& vertex2)
+  const std::shared_ptr<const Vertex>& vertex1,
+  const std::shared_ptr<const Vertex>& vertex2)
 {
   return vertex1->state.distance.x() < vertex2->state.distance.x();
 }

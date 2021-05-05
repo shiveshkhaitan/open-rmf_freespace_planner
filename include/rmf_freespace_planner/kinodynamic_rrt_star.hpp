@@ -121,8 +121,8 @@ private:
     const Eigen::Matrix<double, 6, 2>& state_limits);
 
   static bool compare_vertices(
-    std::shared_ptr<Vertex>& vertex1,
-    std::shared_ptr<Vertex>& vertex2);
+    const std::shared_ptr<const Vertex>& vertex1,
+    const std::shared_ptr<const Vertex>& vertex2);
 
   std::deque<std::shared_ptr<Vertex>> get_seed_vertices(
     const rmf_traffic::Trajectory::Waypoint& start,
