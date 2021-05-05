@@ -87,7 +87,8 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   start_vertex->trajectory.insert(start);
   vertex_list.push_back(start_vertex);
 
-  double length = (start.position().head(2) - goal.position().head(2)).norm();
+  double length =
+    (start.position().head<2>() - goal.position().head<2>()).norm();
 
   estimated_total_cost = length * velocity;
   min_goal_distance = length;
@@ -158,7 +159,7 @@ generate_random_vertex(
   Eigen::Vector3d velocity;
   velocity << vx(gen), vy(gen), vyaw(gen);
 
-  position.head(2) = transform_point(start, goal, position.head(2));
+  position.head<2>() = transform_point(start, goal, position.head<2>());
 
   return std::make_shared<Vertex>(
     State{position, velocity, {position.x(), position.y()}}, nullptr, 0.0);
@@ -217,7 +218,8 @@ get_seed_vertices(
 
           seed_point << (position - start.position()).norm(), -0.5,
             state_limits(2, 0);
-          seed_point.head(2) = transform_point(start, goal, seed_point.head(2));
+          seed_point.head<2>() =
+            transform_point(start, goal, seed_point.head<2>());
 
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
@@ -226,7 +228,8 @@ get_seed_vertices(
 
           seed_point << (position - start.position()).norm(), 0.5, state_limits(
             2, 0);
-          seed_point.head(2) = transform_point(start, goal, seed_point.head(2));
+          seed_point.head<2>() =
+            transform_point(start, goal, seed_point.head<2>());
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
                 {(position - start.position()).norm(), 0.5}},
@@ -400,7 +403,7 @@ void KinodynamicRRTStar::update_estimated_total_cost(
   const std::shared_ptr<Vertex>& vertex)
 {
   double goal_distance =
-    (vertex->state.position.head(2) - goal_vertex->state.position.head(2))
+    (vertex->state.position.head<2>() - goal_vertex->state.position.head<2>())
     .norm();
 
   if (goal_distance < min_goal_distance)
