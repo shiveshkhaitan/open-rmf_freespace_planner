@@ -20,7 +20,7 @@
 #include <rmf_traffic/DetectConflict.hpp>
 #include <rmf_traffic/geometry/Circle.hpp>
 #include <rmf_traffic/Motion.hpp>
-#include <rmf_traffic/schedule/Database.hpp>
+#include <rmf_traffic/schedule/Viewer.hpp>
 
 #include <stack>
 #include <utility>
@@ -59,11 +59,11 @@ KinodynamicRRTStar::Vertex::Vertex(
 
 KinodynamicRRTStar::KinodynamicRRTStar(
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
-  std::shared_ptr<rmf_traffic::schedule::Database> database,
+  std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
   std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
   double sample_time)
 : FreespacePlanner(std::move(validator)),
-  database(std::move(database)),
+  itinerary_viewer(std::move(itinerary_viewer)),
   excluded_participants(std::move(excluded_participants)),
   sample_time(sample_time),
   goal_vertex(nullptr),
@@ -196,7 +196,7 @@ get_seed_vertices(
   rmf_traffic::Profile profile{rmf_traffic::geometry::make_final_convex(
       rmf_traffic::geometry::Circle(0.5))};
 
-  for (const auto& participant_id : database->participant_ids())
+  for (const auto& participant_id : itinerary_viewer->participant_ids())
   {
     if (excluded_participants.has_value())
     {
@@ -206,8 +206,12 @@ get_seed_vertices(
         continue;
       }
     }
-    const auto& itinerary = database->get_itinerary(participant_id);
-    const auto& participant = database->get_participant(participant_id);
+    const auto& itinerary = itinerary_viewer->get_itinerary(participant_id);
+    const auto& participant = itinerary_viewer->get_participant(participant_id);
+    if (!participant)
+    {
+      continue;
+    }
 
     const auto& participant_profile = participant->profile();
     if (itinerary.has_value())
