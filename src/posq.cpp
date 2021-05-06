@@ -32,7 +32,7 @@ Posq::Posq(
   k_v = 3.8;
   k_rho = 1.0;
   k_alpha = 6.0;
-  k_beta = -1.0;
+  k_theta = -1.0;
   rho_end = 0.00510;
   base = 0.4;
   vmax = 1.0;
@@ -53,7 +53,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   double old_sr = 0.0;
 
   PosqState posq_state{};
-  posq_state.beta = 0;
+  posq_state.theta = 0;
   posq_state.eot = false;
 
   double cost = 0.0;
@@ -148,15 +148,15 @@ Posq::PosqState Posq::step(
 
   double phi = end(2) - start(2);
   phi = norm_angle(phi, -M_PI);
-  double beta = norm_angle(phi - alpha, -M_PI);
-  if (abs(posq_state.beta - beta) > M_PI)
+  double theta = norm_angle(phi - alpha, -M_PI);
+  if (abs(posq_state.theta - theta) > M_PI)
   {
-    beta = posq_state.beta;
+    theta = posq_state.theta;
   }
-  posq_state_next.beta = beta;
+  posq_state_next.theta = theta;
 
   double vm = k_rho * tanh(f_rho * k_v);
-  double vd = (k_alpha * alpha + k_beta * beta);
+  double vd = (k_alpha * alpha + k_theta * theta);
   posq_state_next.eot = (rho < rho_end);
   posq_state_next.DiffDriveVelocity = {vm, vd};
 

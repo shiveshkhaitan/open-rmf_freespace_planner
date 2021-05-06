@@ -38,7 +38,7 @@ private:
 
   struct PosqState
   {
-    double beta;
+    double theta;
 
     bool eot;
 
@@ -61,7 +61,7 @@ private:
   double k_v;
   double k_rho;
   double k_alpha;
-  double k_beta;
+  double k_theta;
   double rho_end;
   double base;
   double vmax;
