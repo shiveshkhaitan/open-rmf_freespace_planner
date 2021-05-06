@@ -152,13 +152,13 @@ private:
 
     Eigen::Matrix<double, 6, 2> state_limits;
 
-    std::string map;
+    const std::string map;
 
-    rmf_traffic::Time start_time;
+    const rmf_traffic::Time start_time;
 
-    std::shared_ptr<Vertex> start_vertex;
+    const std::shared_ptr<Vertex> start_vertex;
 
-    std::shared_ptr<Vertex> goal_vertex;
+    const std::shared_ptr<Vertex> goal_vertex;
 
     std::vector<std::shared_ptr<Vertex>> vertex_list;
 
@@ -168,7 +168,7 @@ private:
 
     double min_goal_distance;
 
-    rmf_traffic::agv::VehicleTraits traits;
+    const rmf_traffic::agv::VehicleTraits traits;
 
     KinodynamicRRTStar* kinodynamic_rrt_star;
   };
