@@ -39,6 +39,7 @@ public:
   rmf_traffic::Trajectory plan(
     const rmf_traffic::Trajectory::Waypoint& start,
     const rmf_traffic::Trajectory::Waypoint& goal,
+    const rmf_traffic::agv::VehicleTraits& traits,
     const std::string& map) override;
 
   struct State
@@ -132,6 +133,7 @@ private:
       std::string map,
       std::shared_ptr<Vertex> start_vertex,
       std::shared_ptr<Vertex> goal_vertex,
+      rmf_traffic::agv::VehicleTraits traits,
       KinodynamicRRTStar* kinodynamic_rrt_star
     );
 
@@ -173,6 +175,8 @@ private:
 
     double min_goal_distance;
 
+    rmf_traffic::agv::VehicleTraits traits;
+
     KinodynamicRRTStar* kinodynamic_rrt_star;
   };
 
@@ -183,8 +187,6 @@ private:
   virtual std::optional<ComputedTrajectory> compute_trajectory(
     const std::shared_ptr<Vertex>& start,
     const std::shared_ptr<Vertex>& end) const = 0;
-
-  double velocity;
 
   std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer;
 

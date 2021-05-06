@@ -141,7 +141,7 @@ int main(int argc, char* argv[])
         continue;
       }
       freespace_routes.emplace_back(
-        route.map(), posq->plan(route.trajectory()[i], route.trajectory()[i + 1], route.map()));
+        route.map(), posq->plan(route.trajectory()[i], route.trajectory()[i + 1], traits, route.map()));
     }
   }
 

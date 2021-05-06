@@ -17,6 +17,7 @@
 
 #include "rmf_freespace_planner/kinodynamic_rrt_star.hpp"
 
+#include <rmf_traffic/agv/Interpolate.hpp>
 #include <rmf_traffic/DetectConflict.hpp>
 #include <rmf_traffic/geometry/Circle.hpp>
 #include <rmf_traffic/Motion.hpp>
@@ -64,7 +65,6 @@ KinodynamicRRTStar::KinodynamicRRTStar(
   double sample_time)
 : FreespacePlanner(std::move(validator)),
   sample_time(sample_time),
-  velocity(1.0),
   itinerary_viewer(std::move(itinerary_viewer)),
   excluded_participants(std::move(excluded_participants)),
   estimated_total_cost(0.0)
@@ -75,12 +75,14 @@ KinodynamicRRTStar::InternalState::InternalState(
   std::string map,
   std::shared_ptr<Vertex> start_vertex,
   std::shared_ptr<Vertex> goal_vertex,
+  rmf_traffic::agv::VehicleTraits traits,
   KinodynamicRRTStar* kinodynamic_rrt_star)
 : map(std::move(map)),
   start_vertex(std::move(start_vertex)),
   goal_vertex(std::move(goal_vertex)),
   gen(rd()),
   min_goal_distance(std::numeric_limits<double>::max()),
+  traits(std::move(traits)),
   kinodynamic_rrt_star(kinodynamic_rrt_star)
 {
 }
@@ -88,6 +90,7 @@ KinodynamicRRTStar::InternalState::InternalState(
 rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   const rmf_traffic::Trajectory::Waypoint& start,
   const rmf_traffic::Trajectory::Waypoint& goal,
+  const rmf_traffic::agv::VehicleTraits& traits,
   const std::string& map)
 {
   const auto start_vertex = std::make_shared<Vertex>(
@@ -104,10 +107,10 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     nullptr,
     std::numeric_limits<double>::max());
 
-  InternalState internal_state(map, start_vertex, goal_vertex, this);
+  InternalState internal_state(map, start_vertex, goal_vertex, traits, this);
   internal_state.vertex_list.push_back(start_vertex);
   internal_state.min_goal_distance = length;
-  estimated_total_cost = length * velocity;
+  estimated_total_cost = length * traits.linear().get_nominal_velocity();
 
   Eigen::Matrix<double, 6, 2> state_limits;
   state_limits << 0, length,
@@ -191,9 +194,12 @@ KinodynamicRRTStar::InternalState::get_seed_vertices(
 {
   std::deque<std::shared_ptr<Vertex>> seed_vertices;
 
-  rmf_traffic::Trajectory trajectory;
-  trajectory.insert(start);
-  trajectory.insert(goal);
+  std::vector<Eigen::Vector3d> input_positions;
+  input_positions.push_back(start.position());
+  input_positions.push_back(goal.position());
+
+  auto trajectory = rmf_traffic::agv::Interpolate::positions(
+    traits, start.time(), input_positions);
 
   rmf_traffic::Profile profile{rmf_traffic::geometry::make_final_convex(
       rmf_traffic::geometry::Circle(0.5))};
@@ -407,7 +413,7 @@ void KinodynamicRRTStar::InternalState::update_estimated_total_cost(
   {
     min_goal_distance = goal_distance;
     kinodynamic_rrt_star->estimated_total_cost = vertex->cost_to_root +
-      goal_distance * kinodynamic_rrt_star->velocity;
+      goal_distance * traits.linear().get_nominal_velocity();
   }
 }
 }

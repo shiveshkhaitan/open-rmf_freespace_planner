@@ -19,6 +19,7 @@
 #define RMF_FREESPACE_PLANNER__RMF_FREESPACE_PLANNER_HPP
 
 #include <rmf_traffic/agv/RouteValidator.hpp>
+#include <rmf_traffic/agv/VehicleTraits.hpp>
 #include <rmf_traffic/Route.hpp>
 
 namespace rmf_freespace_planner {
@@ -32,6 +33,7 @@ public:
   virtual rmf_traffic::Trajectory plan(
     const rmf_traffic::Trajectory::Waypoint& start,
     const rmf_traffic::Trajectory::Waypoint& goal,
+    const rmf_traffic::agv::VehicleTraits& traits,
     const std::string& map) = 0;
 
 protected:
