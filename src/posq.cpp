@@ -26,8 +26,8 @@ Posq::Posq(
   double sample_time)
 : KinodynamicRRTStar(std::move(validator),
     std::move(itinerary_viewer),
-    std::move(excluded_participants),
-    sample_time)
+    std::move(excluded_participants)),
+  sample_time(sample_time)
 {
   k_v = 3.8;
   k_rho = 1.0;

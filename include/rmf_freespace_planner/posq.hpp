@@ -58,6 +58,8 @@ private:
 
   static double norm_angle(double theta, double start = 0.0);
 
+  double sample_time;
+
   double k_v;
   double k_rho;
   double k_alpha;

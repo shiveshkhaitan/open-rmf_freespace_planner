@@ -33,8 +33,7 @@ public:
   KinodynamicRRTStar(
     rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
     std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
-    std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
-    double sample_time);
+    std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants);
 
   rmf_traffic::Trajectory plan(
     const rmf_traffic::Trajectory::Waypoint& start,
@@ -122,9 +121,6 @@ public:
   {
     return estimated_total_cost;
   }
-
-protected:
-  double sample_time;
 
 private:
   class InternalState

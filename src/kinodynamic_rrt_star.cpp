@@ -61,10 +61,8 @@ KinodynamicRRTStar::Vertex::Vertex(
 KinodynamicRRTStar::KinodynamicRRTStar(
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
   std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
-  std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
-  double sample_time)
+  std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants)
 : FreespacePlanner(std::move(validator)),
-  sample_time(sample_time),
   itinerary_viewer(std::move(itinerary_viewer)),
   excluded_participants(std::move(excluded_participants)),
   estimated_total_cost(0.0)
