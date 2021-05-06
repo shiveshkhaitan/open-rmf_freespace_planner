@@ -26,38 +26,9 @@ FreespacePlanner::FreespacePlanner(
 {
 }
 
-std::vector<rmf_traffic::Route> FreespacePlanner::make_plan(
-  const std::vector<rmf_traffic::Route>& routes)
-{
-  std::vector<rmf_traffic::Route> planned_routes;
-  if (validator)
-  {
-    for (const auto& route : routes)
-    {
-      map = route.map();
-      for (std::size_t i = 0; i < route.trajectory().size() - 1; ++i)
-      {
-        if ((route.trajectory()[i].position() -
-          route.trajectory()[i + 1].position()).norm() < 1)
-        {
-          continue;
-        }
-        if (route.trajectory()[i].position().x() ==
-          route.trajectory()[i + 1].position().x() &&
-          route.trajectory()[i].position().y() ==
-          route.trajectory()[i + 1].position().y())
-        {
-          continue;
-        }
-        planned_routes.emplace_back(map,
-          plan(route.trajectory()[i], route.trajectory()[i + 1]));
-      }
-    }
-  }
-  return planned_routes;
-}
-
-bool FreespacePlanner::has_conflict(rmf_traffic::Trajectory trajectory)
+bool FreespacePlanner::has_conflict(
+  const std::string& map,
+  rmf_traffic::Trajectory trajectory)
 {
   return validator->find_conflict({map, std::move(trajectory)}).has_value();
 }

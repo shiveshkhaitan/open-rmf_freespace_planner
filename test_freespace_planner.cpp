@@ -51,8 +51,6 @@ int main(int argc, char* argv[])
   auto route_waypoints_pub =
     node->create_publisher<geometry_msgs::msg::PoseArray>("route_waypoints",
       rclcpp::SystemDefaultsQoS());
-  auto samples_pub = node->create_publisher<geometry_msgs::msg::PoseArray>(
-    "samples", rclcpp::SystemDefaultsQoS());
 
   rmf_traffic::agv::VehicleTraits traits{
     {0.5, 2.0}, {0.75, 1.5},
@@ -124,7 +122,29 @@ int main(int argc, char* argv[])
   std::thread estimated_cost_thread(get_estimated_cost, posq);
 
   auto start_timing = std::chrono::steady_clock::now();
-  const auto& freespace_routes = posq->make_plan(routes);
+  std::vector<rmf_traffic::Route> freespace_routes;
+
+  for (const auto& route : routes)
+  {
+    for (std::size_t i = 0; i < route.trajectory().size() - 1; ++i)
+    {
+      if ((route.trajectory()[i].position() -
+          route.trajectory()[i + 1].position()).norm() < 1)
+      {
+        continue;
+      }
+      if (route.trajectory()[i].position().x() ==
+          route.trajectory()[i + 1].position().x() &&
+          route.trajectory()[i].position().y() ==
+          route.trajectory()[i + 1].position().y())
+      {
+        continue;
+      }
+      freespace_routes.emplace_back(
+        route.map(), posq->plan(route.trajectory()[i], route.trajectory()[i + 1], route.map()));
+    }
+  }
+
   auto end_timing = std::chrono::steady_clock::now();
   done = true;
   std::cout << "-------------------------" << std::endl;
@@ -154,27 +174,6 @@ int main(int argc, char* argv[])
   for (int pub_index = 0; pub_index < 3; pub_index++) //Loop required otherwise rviz misses the messages sometimes
   {
     freespace_path_pub->publish(freespace_path);
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-
-  geometry_msgs::msg::PoseArray samples;
-  samples.header.frame_id = "test_map";
-  samples.header.stamp = node->get_clock()->now();
-
-  for (const auto& vertex : posq->get_vertices())
-  {
-    geometry_msgs::msg::Pose ps;
-    ps.position.x = vertex->state.x();
-    ps.position.y = vertex->state.y();
-    tf2::Quaternion quat;
-    quat.setRPY(0, 0, vertex->state.yaw());
-    ps.orientation = tf2::toMsg(quat);
-    samples.poses.push_back(ps);
-  }
-  for (int pub_index = 0; pub_index < 3; pub_index++)
-  {
-    samples_pub->publish(samples);
-
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 

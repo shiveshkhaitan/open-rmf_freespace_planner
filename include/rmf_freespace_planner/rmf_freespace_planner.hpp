@@ -29,20 +29,16 @@ public:
   explicit FreespacePlanner(
     rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator);
 
-  std::vector<rmf_traffic::Route> make_plan(
-    const std::vector<rmf_traffic::Route>& route);
-
-protected:
-  bool has_conflict(rmf_traffic::Trajectory trajectory);
-
-private:
   virtual rmf_traffic::Trajectory plan(
     const rmf_traffic::Trajectory::Waypoint& start,
-    const rmf_traffic::Trajectory::Waypoint& goal) = 0;
+    const rmf_traffic::Trajectory::Waypoint& goal,
+    const std::string& map) = 0;
 
+protected:
+  bool has_conflict(const std::string& map, rmf_traffic::Trajectory trajectory);
+
+private:
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator;
-
-  std::string map;
 };
 }
 
