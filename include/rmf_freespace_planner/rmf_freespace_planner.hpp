@@ -30,10 +30,21 @@ public:
   explicit FreespacePlanner(
     rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator);
 
+  struct Start
+  {
+    Eigen::Vector3d position;
+
+    rmf_traffic::Time time;
+  };
+
+  struct Goal
+  {
+    Eigen::Vector3d position;
+  };
+
   virtual rmf_traffic::Trajectory plan(
-    const rmf_traffic::Trajectory::Waypoint& start,
-    const rmf_traffic::Trajectory::Waypoint& goal,
-    const rmf_traffic::Time& start_time,
+    const Start& start,
+    const Goal& goal,
     const rmf_traffic::agv::VehicleTraits& traits,
     const std::string& map) = 0;
 

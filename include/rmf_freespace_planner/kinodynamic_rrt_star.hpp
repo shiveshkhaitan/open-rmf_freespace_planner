@@ -36,9 +36,8 @@ public:
     std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants);
 
   rmf_traffic::Trajectory plan(
-    const rmf_traffic::Trajectory::Waypoint& start,
-    const rmf_traffic::Trajectory::Waypoint& goal,
-    const rmf_traffic::Time& start_time,
+    const Start& start,
+    const Goal& goal,
     const rmf_traffic::agv::VehicleTraits& traits,
     const std::string& map) override;
 
@@ -47,9 +46,6 @@ public:
     State(
       Eigen::Vector3d position,
       Eigen::Vector3d velocity,
-      Eigen::Vector2d distance);
-
-    State(const rmf_traffic::Trajectory::Waypoint& waypoint,
       Eigen::Vector2d distance);
 
     double x() const

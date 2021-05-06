@@ -39,13 +39,6 @@ KinodynamicRRTStar::State::State(
 {
 }
 
-KinodynamicRRTStar::State::State(
-  const rmf_traffic::Trajectory::Waypoint& waypoint,
-  Eigen::Vector2d distance)
-: State(waypoint.position(), waypoint.velocity(), std::move(distance))
-{
-}
-
 KinodynamicRRTStar::Vertex::Vertex(
   State state,
   std::shared_ptr<Vertex> parent,
@@ -88,23 +81,21 @@ KinodynamicRRTStar::InternalState::InternalState(
 }
 
 rmf_traffic::Trajectory KinodynamicRRTStar::plan(
-  const rmf_traffic::Trajectory::Waypoint& start,
-  const rmf_traffic::Trajectory::Waypoint& goal,
-  const rmf_traffic::Time& start_time,
+  const Start& start,
+  const Goal& goal,
   const rmf_traffic::agv::VehicleTraits& traits,
   const std::string& map)
 {
   const auto start_vertex = std::make_shared<Vertex>(
-    State{start, {0.0, 0.0}},
+    State{start.position, Eigen::Vector3d::Zero(), Eigen::Vector2d::Zero()},
     nullptr,
     0.0);
-  start_vertex->trajectory.insert(start);
+  start_vertex->trajectory.insert(start.time, start.position, goal.position);
 
-  double length =
-    (start.position().head<2>() - goal.position().head<2>()).norm();
+  double length = (start.position.head<2>() - goal.position.head<2>()).norm();
 
   const auto& goal_vertex = std::make_shared<Vertex>(
-    State{goal, {length, 0.0}},
+    State{goal.position, Eigen::Vector3d::Zero(), {length, 0.0}},
     nullptr,
     std::numeric_limits<double>::max());
 
@@ -112,7 +103,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     map,
     start_vertex,
     goal_vertex,
-    start_time,
+    start.time,
     traits,
     this);
   internal_state.vertex_list.push_back(start_vertex);
@@ -122,7 +113,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   Eigen::Matrix<double, 6, 2> state_limits;
   state_limits << 0, length,
     -0.5, 0.5,
-    goal.position().z(), goal.position().z(),
+    goal.position.z(), goal.position.z(),
     -2.0, 2.0,
     -2.0, 2.0,
     0, 0;

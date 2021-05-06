@@ -143,9 +143,8 @@ int main(int argc, char* argv[])
       freespace_routes.emplace_back(
         route.map(),
         posq->plan(
-          route.trajectory()[i],
-          route.trajectory()[i + 1],
-          route.trajectory()[i].time(),
+          {route.trajectory()[i].position(), route.trajectory()[i].time()},
+          {route.trajectory()[i + 1].position()},
           traits,
           route.map()));
     }
