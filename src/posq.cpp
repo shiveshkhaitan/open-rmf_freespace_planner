@@ -89,9 +89,6 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
         0.0,
         posq_state.DiffDriveVelocity.rotational));
     cost += sample_time;
-    cost += 0.01 *
-      (posq_state.DiffDriveVelocity.rotational *
-      posq_state.DiffDriveVelocity.rotational);
   }
 
   if (trajectory.size() < 2)
