@@ -75,9 +75,11 @@ KinodynamicRRTStar::InternalState::InternalState(
   std::string map,
   std::shared_ptr<Vertex> start_vertex,
   std::shared_ptr<Vertex> goal_vertex,
+  rmf_traffic::Time start_time,
   rmf_traffic::agv::VehicleTraits traits,
   KinodynamicRRTStar* kinodynamic_rrt_star)
 : map(std::move(map)),
+  start_time(std::move(start_time)),
   start_vertex(std::move(start_vertex)),
   goal_vertex(std::move(goal_vertex)),
   gen(rd()),
@@ -90,6 +92,7 @@ KinodynamicRRTStar::InternalState::InternalState(
 rmf_traffic::Trajectory KinodynamicRRTStar::plan(
   const rmf_traffic::Trajectory::Waypoint& start,
   const rmf_traffic::Trajectory::Waypoint& goal,
+  const rmf_traffic::Time& start_time,
   const rmf_traffic::agv::VehicleTraits& traits,
   const std::string& map)
 {
@@ -107,7 +110,13 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     nullptr,
     std::numeric_limits<double>::max());
 
-  InternalState internal_state(map, start_vertex, goal_vertex, traits, this);
+  InternalState internal_state(
+    map,
+    start_vertex,
+    goal_vertex,
+    start_time,
+    traits,
+    this);
   internal_state.vertex_list.push_back(start_vertex);
   internal_state.min_goal_distance = length;
   estimated_total_cost = length * traits.linear().get_nominal_velocity();
@@ -121,7 +130,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     0, 0;
   internal_state.state_limits = std::move(state_limits);
 
-  auto seed_vertices = internal_state.get_seed_vertices(start, goal);
+  auto seed_vertices = internal_state.get_seed_vertices();
 
   while (!internal_state.goal_vertex->parent)
   {
@@ -158,7 +167,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     }
   }
 
-  return internal_state.construct_trajectory(start);
+  return internal_state.construct_trajectory();
 }
 
 std::shared_ptr<KinodynamicRRTStar::Vertex>
@@ -188,18 +197,16 @@ bool KinodynamicRRTStar::compare_vertices(
 }
 
 std::deque<std::shared_ptr<KinodynamicRRTStar::Vertex>>
-KinodynamicRRTStar::InternalState::get_seed_vertices(
-  const rmf_traffic::Trajectory::Waypoint& start,
-  const rmf_traffic::Trajectory::Waypoint& goal) const
+KinodynamicRRTStar::InternalState::get_seed_vertices() const
 {
   std::deque<std::shared_ptr<Vertex>> seed_vertices;
 
   std::vector<Eigen::Vector3d> input_positions;
-  input_positions.push_back(start.position());
-  input_positions.push_back(goal.position());
+  input_positions.push_back(start_vertex->state.position);
+  input_positions.push_back(goal_vertex->state.position);
 
   auto trajectory = rmf_traffic::agv::Interpolate::positions(
-    traits, start.time(), input_positions);
+    traits, start_time, input_positions);
 
   rmf_traffic::Profile profile{rmf_traffic::geometry::make_final_convex(
       rmf_traffic::geometry::Circle(0.5))};
@@ -240,21 +247,25 @@ KinodynamicRRTStar::InternalState::get_seed_vertices(
 
           Eigen::Vector3d seed_point;
 
-          seed_point << (position - start.position()).norm(), -0.5,
+          seed_point <<
+          (position - start_vertex->state.position).norm(),
+            -0.5,
             state_limits(2, 0);
           seed_point.head<2>() = transform_point(seed_point.head<2>());
 
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
-                {(position - start.position()).norm(), -0.5}},
+                {(position - start_vertex->state.position).norm(), -0.5}},
               nullptr, 0.0));
 
-          seed_point << (position - start.position()).norm(), 0.5, state_limits(
-            2, 0);
+          seed_point <<
+          (position - start_vertex->state.position).norm(),
+            0.5,
+            state_limits(2, 0);
           seed_point.head<2>() = transform_point(seed_point.head<2>());
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
-                {(position - start.position()).norm(), 0.5}},
+                {(position - start_vertex->state.position).norm(), 0.5}},
               nullptr, 0.0));
         }
       }
@@ -372,11 +383,12 @@ void KinodynamicRRTStar::InternalState::propagate_cost(
   }
 }
 
-rmf_traffic::Trajectory KinodynamicRRTStar::InternalState::construct_trajectory(
-  const rmf_traffic::Trajectory::Waypoint& start) const
+rmf_traffic::Trajectory KinodynamicRRTStar::InternalState::construct_trajectory()
+const
 {
   rmf_traffic::Trajectory trajectory;
-  trajectory.insert(start);
+  trajectory.insert(
+    start_time, start_vertex->state.position, start_vertex->state.velocity);
 
   std::shared_ptr<Vertex> vertex = goal_vertex;
   std::stack<std::shared_ptr<Vertex>> path;

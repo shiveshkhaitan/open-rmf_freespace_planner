@@ -39,6 +39,7 @@ public:
   rmf_traffic::Trajectory plan(
     const rmf_traffic::Trajectory::Waypoint& start,
     const rmf_traffic::Trajectory::Waypoint& goal,
+    const rmf_traffic::Time& start_time,
     const rmf_traffic::agv::VehicleTraits& traits,
     const std::string& map) override;
 
@@ -133,15 +134,14 @@ private:
       std::string map,
       std::shared_ptr<Vertex> start_vertex,
       std::shared_ptr<Vertex> goal_vertex,
+      rmf_traffic::Time start_time,
       rmf_traffic::agv::VehicleTraits traits,
       KinodynamicRRTStar* kinodynamic_rrt_star
     );
 
     std::shared_ptr<Vertex> generate_random_vertex();
 
-    std::deque<std::shared_ptr<Vertex>> get_seed_vertices(
-      const rmf_traffic::Trajectory::Waypoint& start,
-      const rmf_traffic::Trajectory::Waypoint& goal) const;
+    std::deque<std::shared_ptr<Vertex>> get_seed_vertices() const;
 
     Eigen::Vector2d transform_point(const Eigen::Vector2d& point) const;
 
@@ -154,14 +154,15 @@ private:
 
     void propagate_cost(const std::shared_ptr<Vertex>& initial_vertex);
 
-    rmf_traffic::Trajectory construct_trajectory(
-      const rmf_traffic::Trajectory::Waypoint& start) const;
+    rmf_traffic::Trajectory construct_trajectory() const;
 
     void update_estimated_total_cost(const std::shared_ptr<Vertex>& vertex);
 
     Eigen::Matrix<double, 6, 2> state_limits;
 
     std::string map;
+
+    rmf_traffic::Time start_time;
 
     std::shared_ptr<Vertex> start_vertex;
 

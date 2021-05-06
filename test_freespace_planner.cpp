@@ -129,19 +129,25 @@ int main(int argc, char* argv[])
     for (std::size_t i = 0; i < route.trajectory().size() - 1; ++i)
     {
       if ((route.trajectory()[i].position() -
-          route.trajectory()[i + 1].position()).norm() < 1)
+        route.trajectory()[i + 1].position()).norm() < 1)
       {
         continue;
       }
       if (route.trajectory()[i].position().x() ==
-          route.trajectory()[i + 1].position().x() &&
-          route.trajectory()[i].position().y() ==
-          route.trajectory()[i + 1].position().y())
+        route.trajectory()[i + 1].position().x() &&
+        route.trajectory()[i].position().y() ==
+        route.trajectory()[i + 1].position().y())
       {
         continue;
       }
       freespace_routes.emplace_back(
-        route.map(), posq->plan(route.trajectory()[i], route.trajectory()[i + 1], traits, route.map()));
+        route.map(),
+        posq->plan(
+          route.trajectory()[i],
+          route.trajectory()[i + 1],
+          route.trajectory()[i].time(),
+          traits,
+          route.map()));
     }
   }
 
