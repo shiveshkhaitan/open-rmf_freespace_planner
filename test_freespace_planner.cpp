@@ -27,7 +27,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-#include <unistd.h>
+#include <thread>
 
 bool done = false;
 
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
 
   auto posq =
     std::make_shared<rmf_freespace_planner::kinodynamic_rrt_star::Posq>(
-      obstacle_validator, database, rmf_utils::nullopt, 0.1);
+    obstacle_validator, database, rmf_utils::nullopt, 0.1);
 
   std::thread estimated_cost_thread(get_estimated_cost, posq);
 
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
   for (int pub_index = 0; pub_index < 3; pub_index++) //Loop required otherwise rviz misses the messages sometimes
   {
     freespace_path_pub->publish(freespace_path);
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   geometry_msgs::msg::PoseArray samples;
@@ -174,7 +174,8 @@ int main(int argc, char* argv[])
   for (int pub_index = 0; pub_index < 3; pub_index++)
   {
     samples_pub->publish(samples);
-    sleep(1);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   geometry_msgs::msg::PoseArray pose_array;
@@ -199,7 +200,7 @@ int main(int argc, char* argv[])
   for (int pub_index = 0; pub_index < 3; pub_index++)
   {
     route_waypoints_pub->publish(pose_array);
-    sleep(1);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   estimated_cost_thread.join();
