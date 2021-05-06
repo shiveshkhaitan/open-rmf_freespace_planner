@@ -139,11 +139,12 @@ private:
 
     std::deque<std::shared_ptr<Vertex>> get_seed_vertices(
       const rmf_traffic::Trajectory::Waypoint& start,
-      const rmf_traffic::Trajectory::Waypoint& goal);
+      const rmf_traffic::Trajectory::Waypoint& goal) const;
 
-    Eigen::Vector2d transform_point(const Eigen::Vector2d& point);
+    Eigen::Vector2d transform_point(const Eigen::Vector2d& point) const;
 
-    Neighborhood find_close_vertices(const std::shared_ptr<Vertex>& new_vertex);
+    Neighborhood find_close_vertices(const std::shared_ptr<Vertex>& new_vertex)
+    const;
 
     void rewire(
       const std::shared_ptr<Vertex>& new_vertex,
@@ -152,7 +153,7 @@ private:
     void propagate_cost(const std::shared_ptr<Vertex>& initial_vertex);
 
     rmf_traffic::Trajectory construct_trajectory(
-      const rmf_traffic::Trajectory::Waypoint& start);
+      const rmf_traffic::Trajectory::Waypoint& start) const;
 
     void update_estimated_total_cost(const std::shared_ptr<Vertex>& vertex);
 
@@ -181,7 +182,7 @@ private:
 
   virtual std::optional<ComputedTrajectory> compute_trajectory(
     const std::shared_ptr<Vertex>& start,
-    const std::shared_ptr<Vertex>& end) = 0;
+    const std::shared_ptr<Vertex>& end) const = 0;
 
   double velocity;
 

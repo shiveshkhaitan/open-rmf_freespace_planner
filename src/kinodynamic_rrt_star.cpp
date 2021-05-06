@@ -187,7 +187,7 @@ bool KinodynamicRRTStar::compare_vertices(
 std::deque<std::shared_ptr<KinodynamicRRTStar::Vertex>>
 KinodynamicRRTStar::InternalState::get_seed_vertices(
   const rmf_traffic::Trajectory::Waypoint& start,
-  const rmf_traffic::Trajectory::Waypoint& goal)
+  const rmf_traffic::Trajectory::Waypoint& goal) const
 {
   std::deque<std::shared_ptr<Vertex>> seed_vertices;
 
@@ -260,7 +260,7 @@ KinodynamicRRTStar::InternalState::get_seed_vertices(
 }
 
 Eigen::Vector2d KinodynamicRRTStar::InternalState::transform_point(
-  const Eigen::Vector2d& point)
+  const Eigen::Vector2d& point) const
 {
   double x1 = start_vertex->state.position.x();
   double y1 = start_vertex->state.position.y();
@@ -276,8 +276,7 @@ Eigen::Vector2d KinodynamicRRTStar::InternalState::transform_point(
 }
 
 KinodynamicRRTStar::Neighborhood KinodynamicRRTStar::InternalState::
-find_close_vertices(
-  const std::shared_ptr<Vertex>& new_vertex)
+find_close_vertices(const std::shared_ptr<Vertex>& new_vertex) const
 {
   double cost = std::numeric_limits<double>::max();
   std::shared_ptr<Vertex> closest_vertex;
@@ -368,7 +367,7 @@ void KinodynamicRRTStar::InternalState::propagate_cost(
 }
 
 rmf_traffic::Trajectory KinodynamicRRTStar::InternalState::construct_trajectory(
-  const rmf_traffic::Trajectory::Waypoint& start)
+  const rmf_traffic::Trajectory::Waypoint& start) const
 {
   rmf_traffic::Trajectory trajectory;
   trajectory.insert(start);

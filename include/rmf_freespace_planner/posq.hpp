@@ -34,7 +34,7 @@ public:
 private:
   std::optional<ComputedTrajectory> compute_trajectory(
     const std::shared_ptr<Vertex>& start,
-    const std::shared_ptr<Vertex>& end) override;
+    const std::shared_ptr<Vertex>& end) const override;
 
   struct PosqState
   {

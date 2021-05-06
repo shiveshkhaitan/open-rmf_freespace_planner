@@ -40,7 +40,7 @@ Posq::Posq(
 
 std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   const std::shared_ptr<Vertex>& start,
-  const std::shared_ptr<Vertex>& end)
+  const std::shared_ptr<Vertex>& end) const
 {
   Eigen::Vector3d x0(start->state.x(), start->state.y(), start->state.yaw());
   Eigen::Vector3d x1(end->state.x(), end->state.y(), end->state.yaw());
