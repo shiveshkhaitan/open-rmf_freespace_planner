@@ -38,33 +38,41 @@ private:
 
   struct PosqState
   {
+    const Eigen::Vector3d goal;
+
     double theta;
 
     bool eot;
+
+    double vmax;
+
+    double k_v = 3.8;
+
+    double k_rho = 1.0;
+
+    double k_alpha = 6.0;
+
+    double k_theta = -1.0;
+
+    double rho_end = 0.00510;
+
+    bool forward = true;
 
     struct
     {
       double forward;
       double rotational;
     } DiffDriveVelocity;
-  };
 
-  PosqState step(
-    const Eigen::Vector3d& start,
-    const Eigen::Vector3d& end,
-    const PosqState& posq_state,
-    bool forward = true) const;
+    void step(const Eigen::Vector3d& start);
+  };
 
   static double norm_angle(double theta, double start = 0.0);
 
   double sample_time;
 
-  double k_v;
-  double k_rho;
-  double k_alpha;
-  double k_theta;
-  double rho_end;
   double base;
+
   double vmax;
 };
 }

@@ -29,12 +29,8 @@ Posq::Posq(
     std::move(excluded_participants)),
   sample_time(sample_time)
 {
-  k_v = 3.8;
-  k_rho = 1.0;
-  k_alpha = 6.0;
-  k_theta = -1.0;
-  rho_end = 0.00510;
   base = 0.4;
+
   vmax = 1.0;
 }
 
@@ -42,8 +38,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   const std::shared_ptr<Vertex>& start,
   const std::shared_ptr<Vertex>& end) const
 {
-  Eigen::Vector3d x0(start->state.x(), start->state.y(), start->state.yaw());
-  Eigen::Vector3d x1(end->state.x(), end->state.y(), end->state.yaw());
+  Eigen::Vector3d x0(start->state.position);
 
   double t = 0.0;
 
@@ -52,9 +47,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   double old_sl = 0.0;
   double old_sr = 0.0;
 
-  PosqState posq_state{};
-  posq_state.theta = 0;
-  posq_state.eot = false;
+  PosqState posq_state{end->state.position, 0, false, vmax};
 
   double cost = 0.0;
 
@@ -72,7 +65,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     x0(1) = x0(1) + dSm * sin(x0(2) + dSd / 2.0);
     x0(2) = norm_angle(x0(2) + dSd, -M_PI);
 
-    posq_state = step(x0, x1, posq_state, true);
+    posq_state.step(x0);
     double vl = posq_state.DiffDriveVelocity.forward -
       posq_state.DiffDriveVelocity.rotational * base / 2.0;
     vl = std::clamp(vl, -vmax, vmax);
@@ -108,16 +101,10 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   return ComputedTrajectory{trajectory, cost};
 }
 
-Posq::PosqState Posq::step(
-  const Eigen::Vector3d& start,
-  const Eigen::Vector3d& end,
-  const PosqState& posq_state,
-  bool forward) const
+void Posq::PosqState::step(const Eigen::Vector3d& start)
 {
-  PosqState posq_state_next;
-
-  double dx = end(0) - start(0);
-  double dy = end(1) - start(1);
+  double dx = goal(0) - start(0);
+  double dy = goal(1) - start(1);
   double rho = std::hypot(dx, dy);
   double f_rho = std::min(rho, vmax / k_rho);
 
@@ -145,21 +132,20 @@ Posq::PosqState Posq::step(
     }
   }
 
-  double phi = end(2) - start(2);
+  double phi = goal(2) - start(2);
   phi = norm_angle(phi, -M_PI);
-  double theta = norm_angle(phi - alpha, -M_PI);
-  if (abs(posq_state.theta - theta) > M_PI)
+  double angle = norm_angle(phi - alpha, -M_PI);
+  if (abs(theta - angle) > M_PI)
   {
-    theta = posq_state.theta;
+    angle = theta;
   }
-  posq_state_next.theta = theta;
+  theta = angle;
+
+  eot = (rho < rho_end);
 
   double vm = k_rho * tanh(f_rho * k_v);
   double vd = (k_alpha * alpha + k_theta * theta);
-  posq_state_next.eot = (rho < rho_end);
-  posq_state_next.DiffDriveVelocity = {vm, vd};
-
-  return posq_state_next;
+  DiffDriveVelocity = {vm, vd};
 }
 
 double Posq::norm_angle(double theta, double start)
