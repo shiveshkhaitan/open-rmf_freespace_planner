@@ -154,7 +154,7 @@ private:
     const std::shared_ptr<Vertex>& new_vertex,
     const std::shared_ptr<Vertex>& vertex_to_rewire);
 
-  void propagate_cost(const std::shared_ptr<Vertex>& parent_vertex);
+  void propagate_cost(const std::shared_ptr<Vertex>& initial_vertex);
 
   virtual std::optional<ComputedTrajectory> compute_trajectory(
     const std::shared_ptr<Vertex>& start,

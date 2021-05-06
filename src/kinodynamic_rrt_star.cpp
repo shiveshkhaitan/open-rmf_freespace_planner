@@ -336,16 +336,23 @@ void KinodynamicRRTStar::rewire(
 }
 
 void KinodynamicRRTStar::propagate_cost(
-  const std::shared_ptr<Vertex>& parent_vertex)
+  const std::shared_ptr<Vertex>& initial_parent)
 {
-  for (const auto& vertex : vertex_list)
+  std::stack<std::shared_ptr<Vertex>> stack;
+  stack.push(initial_parent);
+  while (!stack.empty())
   {
-    if (vertex->parent == parent_vertex)
+    const auto& parent_vertex = stack.top();
+    stack.pop();
+    for (const auto& vertex : vertex_list)
     {
-      vertex->cost_to_root = parent_vertex->cost_to_root +
-        vertex->cost_to_parent;
-      update_estimated_total_cost(vertex);
-      propagate_cost(vertex);
+      if (vertex->parent == parent_vertex)
+      {
+        vertex->cost_to_root = parent_vertex->cost_to_root +
+          vertex->cost_to_parent;
+        update_estimated_total_cost(vertex);
+        stack.push(vertex);
+      }
     }
   }
 }
