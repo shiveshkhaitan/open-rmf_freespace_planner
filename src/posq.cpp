@@ -72,7 +72,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     x0(1) = x0(1) + dSm * sin(x0(2) + dSd / 2.0);
     x0(2) = norm_angle(x0(2) + dSd, -M_PI);
 
-    posq_state = step(t, x0, x1, posq_state, true);
+    posq_state = step(x0, x1, posq_state, true);
     double vl = posq_state.DiffDriveVelocity.forward -
       posq_state.DiffDriveVelocity.rotational * base / 2.0;
     vl = std::clamp(vl, -vmax, vmax);
@@ -109,7 +109,6 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
 }
 
 Posq::PosqState Posq::step(
-  double t,
   const Eigen::Vector3d& start,
   const Eigen::Vector3d& end,
   const PosqState& posq_state,

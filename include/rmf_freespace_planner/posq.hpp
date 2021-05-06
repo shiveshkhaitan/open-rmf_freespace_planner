@@ -50,7 +50,6 @@ private:
   };
 
   PosqState step(
-    double t,
     const Eigen::Vector3d& start,
     const Eigen::Vector3d& end,
     const PosqState& posq_state,
