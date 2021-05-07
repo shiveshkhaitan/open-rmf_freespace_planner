@@ -35,7 +35,7 @@ public:
     std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
     std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants);
 
-  rmf_traffic::Trajectory plan(
+  std::vector<rmf_traffic::Route> plan(
     const Start& start,
     const Goal& goal,
     const rmf_traffic::agv::VehicleTraits& traits,

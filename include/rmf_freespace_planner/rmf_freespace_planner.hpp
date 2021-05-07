@@ -42,7 +42,7 @@ public:
     Eigen::Vector3d position;
   };
 
-  virtual rmf_traffic::Trajectory plan(
+  virtual std::vector<rmf_traffic::Route> plan(
     const Start& start,
     const Goal& goal,
     const rmf_traffic::agv::VehicleTraits& traits,

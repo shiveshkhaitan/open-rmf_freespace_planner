@@ -80,7 +80,7 @@ KinodynamicRRTStar::InternalState::InternalState(
 {
 }
 
-rmf_traffic::Trajectory KinodynamicRRTStar::plan(
+std::vector<rmf_traffic::Route> KinodynamicRRTStar::plan(
   const Start& start,
   const Goal& goal,
   const rmf_traffic::agv::VehicleTraits& traits,
@@ -156,7 +156,7 @@ rmf_traffic::Trajectory KinodynamicRRTStar::plan(
     }
   }
 
-  return internal_state.construct_trajectory();
+  return {{map, internal_state.construct_trajectory()}};
 }
 
 std::shared_ptr<KinodynamicRRTStar::Vertex>
