@@ -84,6 +84,7 @@ std::vector<rmf_traffic::Route> KinodynamicRRTStar::plan(
   const Start& start,
   const Goal& goal,
   const rmf_traffic::agv::VehicleTraits& traits,
+  const std::optional<std::vector<Obstacle>>& obstacles,
   const std::string& map)
 {
   const auto start_vertex = std::make_shared<Vertex>(

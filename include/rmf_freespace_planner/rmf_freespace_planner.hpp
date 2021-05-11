@@ -30,6 +30,13 @@ public:
   explicit FreespacePlanner(
     rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator);
 
+  struct Obstacle
+  {
+    Eigen::Vector2d position;
+
+    double radius;
+  };
+
   struct Start
   {
     Eigen::Vector3d position;
@@ -46,6 +53,7 @@ public:
     const Start& start,
     const Goal& goal,
     const rmf_traffic::agv::VehicleTraits& traits,
+    const std::optional<std::vector<Obstacle>>& obstacles,
     const std::string& map) = 0;
 
 protected:
