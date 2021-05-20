@@ -62,7 +62,7 @@ private:
     {
       double forward;
       double rotational;
-    } DiffDriveVelocity;
+    } velocity;
 
     void step(const Eigen::Vector3d& start);
   };

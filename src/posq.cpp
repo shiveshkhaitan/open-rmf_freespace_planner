@@ -66,12 +66,12 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     x0(2) = norm_angle(x0(2) + dSd, -M_PI);
 
     posq_state.step(x0);
-    double vl = posq_state.DiffDriveVelocity.forward -
-      posq_state.DiffDriveVelocity.rotational * base / 2.0;
+    double vl = posq_state.velocity.forward -
+      posq_state.velocity.rotational * base / 2.0;
     vl = std::clamp(vl, -vmax, vmax);
 
-    double vr = posq_state.DiffDriveVelocity.forward +
-      posq_state.DiffDriveVelocity.rotational * base / 2.0;
+    double vr = posq_state.velocity.forward +
+      posq_state.velocity.rotational * base / 2.0;
     vr = std::clamp(vr, -vmax, vmax);
 
     t = t + sample_time;
@@ -85,9 +85,9 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
       rmf_traffic::time::apply_offset(trajectory.back().time(), sample_time),
       x0,
       Eigen::Vector3d(
-        posq_state.DiffDriveVelocity.forward,
+        posq_state.velocity.forward,
         0.0,
-        posq_state.DiffDriveVelocity.rotational));
+        posq_state.velocity.rotational));
     cost += sample_time;
   }
 
@@ -142,7 +142,7 @@ void Posq::PosqState::step(const Eigen::Vector3d& start)
 
   double vm = k_rho * tanh(f_rho * k_v);
   double vd = (k_alpha * alpha + k_theta * theta);
-  DiffDriveVelocity = {vm, vd};
+  velocity = {vm, vd};
 }
 
 double Posq::norm_angle(double theta, double start)
