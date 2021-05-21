@@ -88,15 +88,15 @@ public:
   {
     Vertex(
       State state,
-      std::shared_ptr<Vertex> parent = nullptr,
-      double cost_to_root = 0.0,
-      double cost_to_parent = 0.0);
+      std::shared_ptr<Vertex> parent,
+      double cost_to_root,
+      double cost_to_parent,
+      rmf_traffic::Trajectory trajectory);
 
     State state;
     std::shared_ptr<Vertex> parent;
     double cost_to_root;
     double cost_to_parent;
-
     rmf_traffic::Trajectory trajectory;
   };
 

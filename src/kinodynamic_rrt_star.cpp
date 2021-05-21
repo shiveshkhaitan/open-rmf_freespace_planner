@@ -43,11 +43,13 @@ KinodynamicRRTStar::Vertex::Vertex(
   State state,
   std::shared_ptr<Vertex> parent,
   double cost_to_root,
-  double cost_to_parent)
+  double cost_to_parent,
+  rmf_traffic::Trajectory trajectory)
 : state(std::move(state)),
   parent(std::move(parent)),
   cost_to_root(cost_to_root),
-  cost_to_parent(cost_to_parent)
+  cost_to_parent(cost_to_parent),
+  trajectory(std::move(trajectory))
 {
 }
 
@@ -87,18 +89,23 @@ std::vector<rmf_traffic::Route> KinodynamicRRTStar::plan(
   const std::optional<std::vector<Obstacle>>& obstacles,
   const std::string& map)
 {
+  rmf_traffic::Trajectory start_trajectory;
+  start_trajectory.insert(start.time, start.position, goal.position);
   const auto start_vertex = std::make_shared<Vertex>(
     State{start.position, Eigen::Vector3d::Zero(), Eigen::Vector2d::Zero()},
     nullptr,
-    0.0);
-  start_vertex->trajectory.insert(start.time, start.position, goal.position);
+    0.0,
+    0.0,
+    start_trajectory);
 
   double length = (start.position.head<2>() - goal.position.head<2>()).norm();
 
   const auto& goal_vertex = std::make_shared<Vertex>(
     State{goal.position, Eigen::Vector3d::Zero(), {length, 0.0}},
     nullptr,
-    std::numeric_limits<double>::max());
+    std::numeric_limits<double>::max(),
+    0.0,
+    rmf_traffic::Trajectory());
 
   InternalState internal_state(
     map,
@@ -176,7 +183,11 @@ KinodynamicRRTStar::InternalState::generate_random_vertex()
   position.head<2>() = transform_point(position.head<2>());
 
   return std::make_shared<Vertex>(
-    State{position, velocity, {position.x(), position.y()}}, nullptr, 0.0);
+    State{position, velocity, {position.x(), position.y()}},
+    nullptr,
+    0.0,
+    0.0,
+    rmf_traffic::Trajectory());
 }
 
 bool KinodynamicRRTStar::compare_vertices(
@@ -246,7 +257,7 @@ KinodynamicRRTStar::InternalState::get_seed_vertices() const
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
                 {(position - start_vertex->state.position).norm(), -0.5}},
-              nullptr, 0.0));
+              nullptr, 0.0, 0.0, rmf_traffic::Trajectory()));
 
           seed_point <<
           (position - start_vertex->state.position).norm(),
@@ -256,7 +267,7 @@ KinodynamicRRTStar::InternalState::get_seed_vertices() const
           seed_vertices.push_back(std::make_shared<Vertex>(
               State{seed_point, Eigen::Vector3d::Zero(),
                 {(position - start_vertex->state.position).norm(), 0.5}},
-              nullptr, 0.0));
+              nullptr, 0.0, 0.0, rmf_traffic::Trajectory()));
         }
       }
     }
@@ -358,7 +369,7 @@ void KinodynamicRRTStar::InternalState::propagate_cost(
   stack.push(initial_parent);
   while (!stack.empty())
   {
-    const auto& parent_vertex = stack.top();
+    const auto parent_vertex = stack.top();
     stack.pop();
     for (const auto& vertex : vertex_list)
     {
