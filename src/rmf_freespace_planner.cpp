@@ -17,19 +17,10 @@
 
 #include "rmf_freespace_planner/rmf_freespace_planner.hpp"
 
-#include <iostream>
-
 namespace rmf_freespace_planner {
 FreespacePlanner::FreespacePlanner(
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator)
 : validator(std::move(validator))
 {
-}
-
-bool FreespacePlanner::has_conflict(
-  const std::string& map,
-  rmf_traffic::Trajectory trajectory)
-{
-  return validator->find_conflict({map, std::move(trajectory)}).has_value();
 }
 }

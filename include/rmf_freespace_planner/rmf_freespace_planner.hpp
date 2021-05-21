@@ -57,9 +57,6 @@ public:
     const std::string& map) = 0;
 
 protected:
-  bool has_conflict(const std::string& map, rmf_traffic::Trajectory trajectory);
-
-private:
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator;
 };
 }

@@ -317,7 +317,8 @@ find_close_vertices(const std::shared_ptr<Vertex>& new_vertex) const
       continue;
     }
 
-    if (!kinodynamic_rrt_star->has_conflict(map, test_trajectory->trajectory))
+    if (!kinodynamic_rrt_star->validator->find_conflict(
+        {map, test_trajectory->trajectory}).has_value())
     {
       neighborhood.close_vertices.push_back(vertex);
       if (cost > test_trajectory->cost + vertex->cost_to_root)
@@ -349,7 +350,8 @@ void KinodynamicRRTStar::InternalState::rewire(
   }
   if (vertex_to_rewire->cost_to_root >
     random_vertex->cost_to_root + test_trajectory->cost &&
-    !kinodynamic_rrt_star->has_conflict(map, test_trajectory->trajectory))
+    !kinodynamic_rrt_star->validator->find_conflict(
+      {map, test_trajectory->trajectory}).has_value())
   {
     vertex_to_rewire->cost_to_root =
       random_vertex->cost_to_root + test_trajectory->cost;
