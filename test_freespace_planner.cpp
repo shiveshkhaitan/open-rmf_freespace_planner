@@ -99,56 +99,44 @@ int main(int argc, char* argv[])
   obstacle_routes2.push_back(obstacle_route2);
   new_obstacle2.set(obstacle_routes2);
 
-  auto trajectory = rmf_traffic::Trajectory();
-  trajectory.insert(start_time, {1, 1, M_PI + M_PI_4}, {0, 0, 0});
-  trajectory.insert(
-    rmf_traffic::time::apply_offset(start_time, 5), {0, 0, M_PI + M_PI_4},
-    {0, 0, 0});
-  trajectory.insert(
-    rmf_traffic::time::apply_offset(start_time, 15), {-4, -3, M_PI + M_PI_4},
-    {0, 0, 0});
-  auto route = rmf_traffic::Route("test_map", trajectory);
-  std::vector<rmf_traffic::Route> routes;
-  routes.push_back(route);
-
   const auto obstacle_validator =
     rmf_traffic::agv::ScheduleRouteValidator::make(
     database, std::numeric_limits<std::size_t>::max(), traits.profile());
 
   auto posq =
     std::make_shared<rmf_freespace_planner::kinodynamic_rrt_star::Posq>(
-    obstacle_validator, database, rmf_utils::nullopt, 0.1);
+    obstacle_validator, database, std::nullopt, std::nullopt);
 
   std::thread estimated_cost_thread(get_estimated_cost, posq);
 
   auto start_timing = std::chrono::steady_clock::now();
   std::vector<rmf_traffic::Route> freespace_routes;
 
-  for (const auto& route : routes)
+  struct Task
   {
-    for (std::size_t i = 0; i < route.trajectory().size() - 1; ++i)
-    {
-      if ((route.trajectory()[i].position() -
-        route.trajectory()[i + 1].position()).norm() < 1)
-      {
-        continue;
-      }
-      if (route.trajectory()[i].position().x() ==
-        route.trajectory()[i + 1].position().x() &&
-        route.trajectory()[i].position().y() ==
-        route.trajectory()[i + 1].position().y())
-      {
-        continue;
-      }
-      auto freespace_route =
-        posq->plan(
-          {route.trajectory()[i].position(), route.trajectory()[i].time()},
-          {route.trajectory()[i + 1].position()},
-          traits,
-          std::nullopt,
-          route.map());
-      freespace_routes.insert(freespace_routes.end(), freespace_route.begin(), freespace_route.end());
-    }
+    rmf_freespace_planner::FreespacePlanner::Start start;
+
+    rmf_freespace_planner::FreespacePlanner::Goal goal;
+  };
+
+  Task tasks[2];
+
+  tasks[0].start = {{1, 1, M_PI + M_PI_4}, start_time};
+  tasks[0].goal = {{0, 0, M_PI + M_PI_4}};
+
+  tasks[1].start = {{0, 0, M_PI + M_PI_4}, rmf_traffic::time::apply_offset(start_time, 5)};
+  tasks[1].goal = {{-4, -3, M_PI + M_PI_4}};
+
+  for (const auto& task : tasks)
+  {
+    auto freespace_route =
+      posq->plan(
+        task.start,
+        task.goal,
+        traits,
+        std::nullopt,
+        "test_map");
+    freespace_routes.insert(freespace_routes.end(), freespace_route.begin(), freespace_route.end());
   }
 
   auto end_timing = std::chrono::steady_clock::now();
@@ -186,21 +174,25 @@ int main(int argc, char* argv[])
   geometry_msgs::msg::PoseArray pose_array;
   pose_array.header.stamp = node->get_clock()->now();
   pose_array.header.frame_id = "test_map";
-  geometry_msgs::msg::Pose pose;
-  pose.position.x = trajectory.front().position().x();
-  pose.position.y = trajectory.front().position().y();
-  pose.position.z = 0;
-  tf2::Quaternion quat;
-  quat.setRPY(0, 0, trajectory.front().position().z());
-  pose.orientation = tf2::toMsg(quat);
-  pose_array.poses.push_back(pose);
 
-  pose.position.x = trajectory.back().position().x();
-  pose.position.y = trajectory.back().position().y();
-  pose.position.z = 0;
-  quat.setRPY(0, 0, trajectory.back().position().z());
-  pose.orientation = tf2::toMsg(quat);
-  pose_array.poses.push_back(pose);
+  for (const auto& task : tasks)
+  {
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = task.start.position.x();
+    pose.position.y = task.start.position.y();
+    pose.position.z = 0;
+    tf2::Quaternion quat;
+    quat.setRPY(0, 0, task.start.position.z());
+    pose.orientation = tf2::toMsg(quat);
+    pose_array.poses.push_back(pose);
+
+    pose.position.x = task.goal.position.x();
+    pose.position.y = task.goal.position.y();
+    pose.position.z = 0;
+    quat.setRPY(0, 0, task.goal.position.z());
+    pose.orientation = tf2::toMsg(quat);
+    pose_array.poses.push_back(pose);
+  }
 
   for (int pub_index = 0; pub_index < 3; pub_index++)
   {
