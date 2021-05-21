@@ -23,15 +23,15 @@ Posq::Posq(
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
   std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
   std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
-  double sample_time)
+  std::optional<Parameters> _parameters)
 : KinodynamicRRTStar(std::move(validator),
     std::move(itinerary_viewer),
-    std::move(excluded_participants)),
-  sample_time(sample_time)
+    std::move(excluded_participants))
 {
-  base = 0.4;
-
-  vmax = 1.0;
+  if (_parameters.has_value())
+  {
+    parameters = _parameters.value();
+  }
 }
 
 std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
@@ -47,7 +47,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   double old_sl = 0.0;
   double old_sr = 0.0;
 
-  PosqState posq_state{end->state.position, 0, false, vmax};
+  PosqState posq_state{end->state.position, parameters, 0, false};
 
   double cost = 0.0;
 
@@ -59,7 +59,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     double dSl = sl - old_sl;
     double dSr = sr - old_sr;
     double dSm = (dSl + dSr) / 2.0;
-    double dSd = (dSr - dSl) / base;
+    double dSd = (dSr - dSl) / parameters.base;
 
     x0(0) = x0(0) + dSm * cos(x0(2) + dSd / 2.0);
     x0(1) = x0(1) + dSm * sin(x0(2) + dSd / 2.0);
@@ -67,28 +67,28 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
 
     posq_state.step(x0);
     double vl = posq_state.velocity.forward -
-      posq_state.velocity.rotational * base / 2.0;
-    vl = std::clamp(vl, -vmax, vmax);
+      posq_state.velocity.rotational * parameters.base / 2.0;
+    vl = std::clamp(vl, -parameters.vmax, parameters.vmax);
 
     double vr = posq_state.velocity.forward +
-      posq_state.velocity.rotational * base / 2.0;
-    vr = std::clamp(vr, -vmax, vmax);
+      posq_state.velocity.rotational * parameters.base / 2.0;
+    vr = std::clamp(vr, -parameters.vmax, parameters.vmax);
 
-    t = t + sample_time;
+    t = t + parameters.sample_time;
 
     old_sl = sl;
     old_sr = sr;
-    sl += vl * sample_time;
-    sr += vr * sample_time;
+    sl += vl * parameters.sample_time;
+    sr += vr * parameters.sample_time;
 
     trajectory.insert(
-      rmf_traffic::time::apply_offset(trajectory.back().time(), sample_time),
+      rmf_traffic::time::apply_offset(trajectory.back().time(), parameters.sample_time),
       x0,
       Eigen::Vector3d(
         posq_state.velocity.forward,
         0.0,
         posq_state.velocity.rotational));
-    cost += sample_time;
+    cost += parameters.sample_time;
   }
 
   if (trajectory.size() < 2)
@@ -103,10 +103,10 @@ void Posq::PosqState::step(const Eigen::Vector3d& start)
   double dx = goal(0) - start(0);
   double dy = goal(1) - start(1);
   double rho = std::hypot(dx, dy);
-  double f_rho = std::min(rho, vmax / k_rho);
+  double f_rho = std::min(rho, parameters.vmax / parameters.k_rho);
 
   double alpha = norm_angle(atan2(dy, dx) - start(2), -M_PI);
-  if (forward)
+  if (parameters.forward)
   {
     if (alpha > M_PI_2)
     {
@@ -138,16 +138,17 @@ void Posq::PosqState::step(const Eigen::Vector3d& start)
   }
   theta = angle;
 
-  eot = (rho < rho_end);
+  eot = (rho < parameters.rho_end);
 
-  double vm = k_rho * tanh(f_rho * k_v);
-  double vd = (k_alpha * alpha + k_theta * theta);
+  double vm = parameters.k_rho * tanh(f_rho * parameters.k_v);
+  double vd = (parameters.k_alpha * alpha + parameters.k_theta * theta);
   velocity = {vm, vd};
 }
 
 double Posq::norm_angle(double theta, double start)
 {
-  if (theta < std::numeric_limits<double>::infinity())
+  const double inf = std::numeric_limits<double>::infinity();
+  if (-inf < theta && theta < inf)
   {
     while (theta >= start + 2 * M_PI)
     {
@@ -159,10 +160,8 @@ double Posq::norm_angle(double theta, double start)
     }
     return theta;
   }
-  else
-  {
-    return std::numeric_limits<double>::infinity();
-  }
+
+  throw std::runtime_error("[rmf_freespace_planner::Posq::norm_angle] Received infinite theta");
 }
 }
 }

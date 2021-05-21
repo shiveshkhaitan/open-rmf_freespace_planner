@@ -25,26 +25,11 @@ namespace kinodynamic_rrt_star {
 class Posq : public KinodynamicRRTStar
 {
 public:
-  Posq(
-    rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
-    std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
-    std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
-    double sample_time);
-
-private:
-  std::optional<ComputedTrajectory> compute_trajectory(
-    const std::shared_ptr<Vertex>& start,
-    const std::shared_ptr<Vertex>& end) const override;
-
-  struct PosqState
+  struct Parameters
   {
-    const Eigen::Vector3d goal;
+    double vmax = 1.0;
 
-    double theta;
-
-    bool eot;
-
-    double vmax;
+    double base = 0.4;
 
     double k_v = 3.8;
 
@@ -58,6 +43,30 @@ private:
 
     bool forward = true;
 
+    double sample_time = 0.1;
+  } parameters;
+
+  Posq(
+    rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
+    std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
+    std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
+    std::optional<Parameters> parameters);
+
+private:
+  std::optional<ComputedTrajectory> compute_trajectory(
+    const std::shared_ptr<Vertex>& start,
+    const std::shared_ptr<Vertex>& end) const override;
+
+  struct PosqState
+  {
+    const Eigen::Vector3d goal;
+
+    const Parameters parameters;
+
+    double theta;
+
+    bool eot;
+
     struct
     {
       double forward;
@@ -68,12 +77,6 @@ private:
   };
 
   static double norm_angle(double theta, double start = 0.0);
-
-  double sample_time;
-
-  double base;
-
-  double vmax;
 };
 }
 }
