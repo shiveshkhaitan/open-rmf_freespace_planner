@@ -32,11 +32,12 @@
 bool done = false;
 
 void get_estimated_cost(
-  const std::shared_ptr<rmf_freespace_planner::kinodynamic_rrt_star::Posq>& posq)
+  const std::shared_ptr<rmf_freespace_planner::kinodynamic_rrt_star::KinodynamicRRTStar>& kinodynamic_rrt_star)
 {
   while (!done)
   {
-    std::cout << "Estimated cost " << posq->get_estimated_total_cost() <<
+    std::cout << "Estimated cost " <<
+      kinodynamic_rrt_star->get_estimated_total_cost() <<
       std::endl;
   }
 }
@@ -103,11 +104,14 @@ int main(int argc, char* argv[])
     rmf_traffic::agv::ScheduleRouteValidator::make(
     database, std::numeric_limits<std::size_t>::max(), traits.profile());
 
-  auto posq =
-    std::make_shared<rmf_freespace_planner::kinodynamic_rrt_star::Posq>(
-    obstacle_validator, database, std::nullopt, std::nullopt);
+  auto kinodynamic_rrt_star =
+    std::make_shared<rmf_freespace_planner::kinodynamic_rrt_star::KinodynamicRRTStar>(
+    obstacle_validator,
+    database,
+    std::nullopt,
+    std::make_unique<rmf_freespace_planner::kinodynamic_rrt_star::Posq>());
 
-  std::thread estimated_cost_thread(get_estimated_cost, posq);
+  std::thread estimated_cost_thread(get_estimated_cost, kinodynamic_rrt_star);
 
   auto start_timing = std::chrono::steady_clock::now();
   std::vector<rmf_traffic::Route> freespace_routes;
@@ -124,19 +128,21 @@ int main(int argc, char* argv[])
   tasks[0].start = {{1, 1, M_PI + M_PI_4}, start_time};
   tasks[0].goal = {{0, 0, M_PI + M_PI_4}};
 
-  tasks[1].start = {{0, 0, M_PI + M_PI_4}, rmf_traffic::time::apply_offset(start_time, 5)};
+  tasks[1].start = {{0, 0, M_PI + M_PI_4},
+    rmf_traffic::time::apply_offset(start_time, 5)};
   tasks[1].goal = {{-4, -3, M_PI + M_PI_4}};
 
   for (const auto& task : tasks)
   {
     auto freespace_route =
-      posq->plan(
-        task.start,
-        task.goal,
-        traits,
-        std::nullopt,
-        "test_map");
-    freespace_routes.insert(freespace_routes.end(), freespace_route.begin(), freespace_route.end());
+      kinodynamic_rrt_star->plan(
+      task.start,
+      task.goal,
+      traits,
+      std::nullopt,
+      "test_map");
+    freespace_routes.insert(freespace_routes.end(),
+      freespace_route.begin(), freespace_route.end());
   }
 
   auto end_timing = std::chrono::steady_clock::now();

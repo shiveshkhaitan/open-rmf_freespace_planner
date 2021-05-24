@@ -19,24 +19,15 @@
 
 namespace rmf_freespace_planner {
 namespace kinodynamic_rrt_star {
-Posq::Posq(
-  rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
-  std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
-  std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
-  std::optional<Parameters> _parameters)
-: KinodynamicRRTStar(std::move(validator),
-    std::move(itinerary_viewer),
-    std::move(excluded_participants))
+
+Posq::Posq(Parameters parameters)
+: parameters(parameters)
 {
-  if (_parameters.has_value())
-  {
-    parameters = _parameters.value();
-  }
 }
 
-std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
-  const std::shared_ptr<Vertex>& start,
-  const std::shared_ptr<Vertex>& end) const
+std::optional<KinodynamicRRTStar::ComputedTrajectory> Posq::compute_trajectory(
+  const std::shared_ptr<KinodynamicRRTStar::Vertex>& start,
+  const std::shared_ptr<KinodynamicRRTStar::Vertex>& end) const
 {
   Eigen::Vector3d x0(start->state.position);
 
@@ -82,7 +73,8 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
     sr += vr * parameters.sample_time;
 
     trajectory.insert(
-      rmf_traffic::time::apply_offset(trajectory.back().time(), parameters.sample_time),
+      rmf_traffic::time::apply_offset(
+        trajectory.back().time(), parameters.sample_time),
       x0,
       Eigen::Vector3d(
         posq_state.velocity.forward,
@@ -95,7 +87,7 @@ std::optional<Posq::ComputedTrajectory> Posq::compute_trajectory(
   {
     return std::nullopt;
   }
-  return ComputedTrajectory{trajectory, cost};
+  return KinodynamicRRTStar::ComputedTrajectory{trajectory, cost};
 }
 
 void Posq::PosqState::step(const Eigen::Vector3d& start)
@@ -161,7 +153,8 @@ double Posq::norm_angle(double theta, double start)
     return theta;
   }
 
-  throw std::runtime_error("[rmf_freespace_planner::Posq::norm_angle] Received infinite theta");
+  throw std::runtime_error(
+          "[rmf_freespace_planner::Posq::norm_angle] Received infinite theta");
 }
 }
 }

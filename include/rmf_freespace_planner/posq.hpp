@@ -22,7 +22,7 @@
 
 namespace rmf_freespace_planner {
 namespace kinodynamic_rrt_star {
-class Posq : public KinodynamicRRTStar
+class Posq : public KinodynamicRRTStar::LocalPlanner
 {
 public:
   struct Parameters
@@ -46,16 +46,14 @@ public:
     double sample_time = 0.1;
   } parameters;
 
-  Posq(
-    rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
-    std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
-    std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
-    std::optional<Parameters> parameters);
+  Posq() = default;
+
+  Posq(Parameters parameters);
 
 private:
-  std::optional<ComputedTrajectory> compute_trajectory(
-    const std::shared_ptr<Vertex>& start,
-    const std::shared_ptr<Vertex>& end) const override;
+  std::optional<KinodynamicRRTStar::ComputedTrajectory> compute_trajectory(
+    const std::shared_ptr<KinodynamicRRTStar::Vertex>& start,
+    const std::shared_ptr<KinodynamicRRTStar::Vertex>& end) const override;
 
   struct PosqState
   {

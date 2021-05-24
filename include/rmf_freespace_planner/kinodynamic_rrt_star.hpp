@@ -20,6 +20,8 @@
 
 #include "rmf_freespace_planner/rmf_freespace_planner.hpp"
 
+#include <rmf_traffic/agv/RouteValidator.hpp>
+
 #include <Eigen/Core>
 
 #include <deque>
@@ -27,20 +29,14 @@
 
 namespace rmf_freespace_planner {
 namespace kinodynamic_rrt_star {
-class KinodynamicRRTStar : public FreespacePlanner
+class KinodynamicRRTStar : public FreespacePlanner::Planner
 {
 public:
-  KinodynamicRRTStar(
-    rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
-    std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
-    std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants);
-
-  std::vector<rmf_traffic::Route> plan(
-    const Start& start,
-    const Goal& goal,
-    const rmf_traffic::agv::VehicleTraits& traits,
-    const std::optional<std::vector<Obstacle>>& obstacles,
-    const std::string& map) override;
+  struct ComputedTrajectory
+  {
+    rmf_traffic::Trajectory trajectory;
+    double cost;
+  };
 
   struct State
   {
@@ -100,11 +96,26 @@ public:
     rmf_traffic::Trajectory trajectory;
   };
 
-  struct ComputedTrajectory
+  class LocalPlanner
   {
-    rmf_traffic::Trajectory trajectory;
-    double cost;
+  public:
+    virtual std::optional<ComputedTrajectory> compute_trajectory(
+      const std::shared_ptr<Vertex>& start,
+      const std::shared_ptr<Vertex>& end) const = 0;
   };
+
+  KinodynamicRRTStar(
+    rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
+    std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
+    std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
+    std::unique_ptr<LocalPlanner> local_planner);
+
+  std::vector<rmf_traffic::Route> plan(
+    const FreespacePlanner::Start& start,
+    const FreespacePlanner::Goal& goal,
+    const rmf_traffic::agv::VehicleTraits& traits,
+    const std::optional<std::vector<FreespacePlanner::Obstacle>>& obstacles,
+    const std::string& map) override;
 
   struct Neighborhood
   {
@@ -178,14 +189,14 @@ private:
     const std::shared_ptr<const Vertex>& vertex1,
     const std::shared_ptr<const Vertex>& vertex2);
 
-  virtual std::optional<ComputedTrajectory> compute_trajectory(
-    const std::shared_ptr<Vertex>& start,
-    const std::shared_ptr<Vertex>& end) const = 0;
+  rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator;
 
   std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer;
 
   std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>>
   excluded_participants;
+
+  std::unique_ptr<LocalPlanner> local_planner;
 
   double estimated_total_cost;
 };

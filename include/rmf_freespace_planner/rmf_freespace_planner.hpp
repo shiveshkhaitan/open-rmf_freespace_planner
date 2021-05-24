@@ -18,7 +18,6 @@
 #ifndef RMF_FREESPACE_PLANNER__RMF_FREESPACE_PLANNER_HPP
 #define RMF_FREESPACE_PLANNER__RMF_FREESPACE_PLANNER_HPP
 
-#include <rmf_traffic/agv/RouteValidator.hpp>
 #include <rmf_traffic/agv/VehicleTraits.hpp>
 #include <rmf_traffic/Route.hpp>
 
@@ -27,9 +26,6 @@ namespace rmf_freespace_planner {
 class FreespacePlanner
 {
 public:
-  explicit FreespacePlanner(
-    rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator);
-
   struct Obstacle
   {
     Eigen::Vector2d position;
@@ -49,15 +45,16 @@ public:
     Eigen::Vector3d position;
   };
 
-  virtual std::vector<rmf_traffic::Route> plan(
-    const Start& start,
-    const Goal& goal,
-    const rmf_traffic::agv::VehicleTraits& traits,
-    const std::optional<std::vector<Obstacle>>& obstacles,
-    const std::string& map) = 0;
-
-protected:
-  rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator;
+  class Planner
+  {
+  public:
+    virtual std::vector<rmf_traffic::Route> plan(
+      const Start& start,
+      const Goal& goal,
+      const rmf_traffic::agv::VehicleTraits& traits,
+      const std::optional<std::vector<Obstacle>>& obstacles,
+      const std::string& map) = 0;
+  };
 };
 }
 

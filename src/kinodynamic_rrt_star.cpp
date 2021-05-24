@@ -56,10 +56,12 @@ KinodynamicRRTStar::Vertex::Vertex(
 KinodynamicRRTStar::KinodynamicRRTStar(
   rmf_utils::clone_ptr<rmf_traffic::agv::RouteValidator> validator,
   std::shared_ptr<rmf_traffic::schedule::ItineraryViewer> itinerary_viewer,
-  std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants)
-: FreespacePlanner(std::move(validator)),
+  std::optional<std::unordered_set<rmf_traffic::schedule::ParticipantId>> excluded_participants,
+  std::unique_ptr<LocalPlanner> local_planner)
+: validator(std::move(validator)),
   itinerary_viewer(std::move(itinerary_viewer)),
   excluded_participants(std::move(excluded_participants)),
+  local_planner(std::move(local_planner)),
   estimated_total_cost(0.0)
 {
 }
@@ -83,10 +85,10 @@ KinodynamicRRTStar::InternalState::InternalState(
 }
 
 std::vector<rmf_traffic::Route> KinodynamicRRTStar::plan(
-  const Start& start,
-  const Goal& goal,
+  const FreespacePlanner::Start& start,
+  const FreespacePlanner::Goal& goal,
   const rmf_traffic::agv::VehicleTraits& traits,
-  const std::optional<std::vector<Obstacle>>& obstacles,
+  const std::optional<std::vector<FreespacePlanner::Obstacle>>& obstacles,
   const std::string& map)
 {
   rmf_traffic::Trajectory start_trajectory;
@@ -309,7 +311,8 @@ find_close_vertices(const std::shared_ptr<Vertex>& new_vertex) const
       continue;
     }
 
-    auto test_trajectory = kinodynamic_rrt_star->compute_trajectory(
+    auto test_trajectory =
+      kinodynamic_rrt_star->local_planner->compute_trajectory(
       vertex, new_vertex);
 
     if (!test_trajectory.has_value())
@@ -342,7 +345,8 @@ void KinodynamicRRTStar::InternalState::rewire(
   const std::shared_ptr<Vertex>& random_vertex,
   const std::shared_ptr<Vertex>& vertex_to_rewire)
 {
-  auto test_trajectory = kinodynamic_rrt_star->compute_trajectory(
+  auto test_trajectory =
+    kinodynamic_rrt_star->local_planner->compute_trajectory(
     random_vertex, vertex_to_rewire);
   if (!test_trajectory.has_value())
   {

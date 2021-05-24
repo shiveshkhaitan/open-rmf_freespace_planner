@@ -20,7 +20,6 @@ include(GNUInstallDirs)
 
 add_library(
   ${PROJECT_NAME}
-    src/${PROJECT_NAME}.cpp
     src/kinodynamic_rrt_star.cpp
     src/posq.cpp
 )
