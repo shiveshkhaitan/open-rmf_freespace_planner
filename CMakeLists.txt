@@ -22,6 +22,7 @@ add_library(
   ${PROJECT_NAME}
     src/kinodynamic_rrt_star.cpp
     src/posq.cpp
+    src/rmf_probabilistic_road_map.cpp
 )
 
 target_link_libraries(
